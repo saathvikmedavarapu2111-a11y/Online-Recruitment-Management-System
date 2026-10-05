@@ -1,0 +1,175 @@
+/* SmartRecruit — shared theme (matches the Review-4 deck) */
+:root {
+  --bg: #f6f4ee;
+  --card: #ffffff;
+  --ink: #16213a;
+  --gray: #5a6b85;
+  --faint: #8a97ad;
+  --blue: #1e4fd8;
+  --blue-dark: #1740ac;
+  --teal: #0e9f8a;
+  --green: #15803d;
+  --amber: #b45309;
+  --red: #b91c1c;
+  --line: #d9e1ec;
+  --panel: #f4f6fa;
+  --radius: 10px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: Calibri, 'Segoe UI', Arial, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  min-height: 100vh;
+}
+/* ---------- nav ---------- */
+.nav {
+  background: var(--card);
+  border-bottom: 1px solid var(--line);
+  padding: 0 24px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.nav .brand { font-weight: 700; font-size: 18px; color: var(--blue); letter-spacing: 1px; }
+.nav .brand small { color: var(--gray); font-weight: 400; letter-spacing: 0; font-size: 13px; margin-left: 8px; }
+.nav .who { color: var(--gray); font-size: 14px; margin-right: 12px; }
+/* ---------- layout ---------- */
+.container { max-width: 1100px; margin: 0 auto; padding: 28px 20px 60px; }
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 22px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(22, 33, 58, 0.05);
+}
+.card h2 { font-size: 19px; margin-bottom: 4px; }
+.card .sub { color: var(--gray); font-size: 14px; margin-bottom: 16px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+.grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+@media (max-width: 800px) { .grid2, .grid3, .grid4 { grid-template-columns: 1fr; } }
+.kpi { text-align: left; }
+.kpi .num { font-size: 30px; font-weight: 700; color: var(--blue); }
+.kpi .lbl { color: var(--gray); font-size: 13px; }
+/* ---------- tabs ---------- */
+.tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+.tab {
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--gray);
+  padding: 9px 18px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+  font-family: inherit;
+}
+.tab.active { background: var(--blue); border-color: var(--blue); color: #fff; }
+/* ---------- forms ---------- */
+label { display: block; font-size: 13px; font-weight: 700; color: var(--gray); margin: 12px 0 5px; }
+input, select, textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #fff;
+  color: var(--ink);
+}
+input:focus, select:focus, textarea:focus { outline: 2px solid var(--blue); border-color: var(--blue); }
+textarea { min-height: 90px; resize: vertical; }
+.row { display: flex; gap: 12px; }
+.row > * { flex: 1; }
+/* ---------- buttons ---------- */
+.btn {
+  display: inline-block;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  background: var(--blue);
+  color: #fff;
+  margin-top: 14px;
+}
+.btn:hover { background: var(--blue-dark); }
+.btn.secondary { background: #fff; color: var(--blue); border: 1px solid var(--blue); }
+.btn.secondary:hover { background: #eef3ff; }
+.btn.danger { background: var(--red); }
+.btn.small { padding: 6px 12px; font-size: 12px; margin-top: 0; }
+.btn.teal { background: var(--teal); }
+/* ---------- tables ---------- */
+table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 8px; }
+th {
+  background: var(--blue);
+  color: #fff;
+  text-align: left;
+  padding: 10px 12px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+th:first-child { border-radius: 8px 0 0 0; }
+th:last-child { border-radius: 0 8px 0 0; }
+td { padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+tr:nth-child(even) td { background: var(--panel); }
+/* ---------- badges / bars ---------- */
+.badge {
+  display: inline-block;
+  padding: 3px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  background: #eef3ff;
+  color: var(--blue);
+  white-space: nowrap;
+}
+.badge.applied { background: #eef3ff; color: var(--blue); }
+.badge.screening { background: #e6f7f4; color: var(--teal); }
+.badge.interview { background: #fef3e2; color: var(--amber); }
+.badge.offer { background: #e8f7ee; color: var(--green); }
+.badge.hired { background: #e8f7ee; color: var(--green); }
+.badge.rejected { background: #fdecec; color: var(--red); }
+.scorebar { background: #e7ecf4; border-radius: 999px; height: 10px; min-width: 110px; overflow: hidden; }
+.scorebar > div { background: var(--blue); height: 100%; border-radius: 999px; }
+.scorewrap { display: flex; align-items: center; gap: 8px; }
+.scorewrap b { font-size: 13px; }
+/* ---------- login ---------- */
+.center { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.login-card { width: 420px; max-width: 100%; }
+.login-card h1 { color: var(--blue); letter-spacing: 3px; font-size: 26px; text-align: center; }
+.login-card .tag { text-align: center; color: var(--gray); font-size: 14px; margin: 6px 0 18px; }
+.roletabs { display: flex; gap: 8px; margin-bottom: 6px; }
+.roletabs .tab { flex: 1; text-align: center; }
+.link { color: var(--blue); cursor: pointer; font-size: 14px; }
+.center-text { text-align: center; margin-top: 14px; font-size: 14px; color: var(--gray); }
+/* ---------- toast ---------- */
+#toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--ink);
+  color: #fff;
+  padding: 12px 22px;
+  border-radius: 8px;
+  font-size: 14px;
+  opacity: 0;
+  transition: all 0.25s;
+  z-index: 100;
+  max-width: 90vw;
+}
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+#toast.err { background: var(--red); }
+.hidden { display: none !important; }
+.muted { color: var(--gray); font-size: 13px; }
+.mt { margin-top: 14px; }

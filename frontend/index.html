@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SmartRecruit — Sign in</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="center">
+  <div class="card login-card">
+    <h1>SMART RECRUIT</h1>
+    <p class="tag">AI-Integrated Online Recruitment Management System</p>
+
+    <div class="roletabs" id="roleTabs"></div>
+
+    <div id="loginForm">
+      <label>Email address</label>
+      <input id="liEmail" type="email" placeholder="you@example.com">
+      <label>Password</label>
+      <input id="liPass" type="password" placeholder="••••••••">
+      <button class="btn" style="width:100%" onclick="doLogin()">Sign In</button>
+      <p class="center-text">New here? <span class="link" onclick="showReg()">Create an account</span></p>
+    </div>
+
+    <div id="regForm" class="hidden">
+      <label>Full name</label>
+      <input id="rgName" placeholder="Your name">
+      <label>Email address</label>
+      <input id="rgEmail" type="email" placeholder="you@example.com">
+      <label>Password (min 6 characters)</label>
+      <input id="rgPass" type="password" placeholder="••••••••">
+      <button class="btn" style="width:100%" onclick="doRegister()">Create Account</button>
+      <p class="center-text">Have an account? <span class="link" onclick="showLogin()">Sign in</span></p>
+    </div>
+
+    <p class="center-text muted" style="margin-top:18px">Demo: admin@smartrecruit.app / admin123</p>
+  </div>
+</div>
+<script src="js/common.js"></script>
+<script src="js/login.js"></script>
+</body>
+</html>

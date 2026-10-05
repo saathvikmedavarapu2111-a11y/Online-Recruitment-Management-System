@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SmartRecruit — Admin</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<nav class="nav">
+  <div><span class="brand">SMART RECRUIT</span><small>admin console</small></div>
+  <div><span class="who" id="navWho"></span><button class="btn small secondary" onclick="logout()">Sign out</button></div>
+</nav>
+<div class="container">
+  <div class="card">
+    <h2>System overview</h2>
+    <p class="sub">Live counts across the whole platform.</p>
+    <div class="grid4" id="kpis"></div>
+    <div class="grid2 mt">
+      <div><h3 style="font-size:15px;margin-bottom:8px">Users by role</h3><div id="byRole"></div></div>
+      <div><h3 style="font-size:15px;margin-bottom:8px">Applications by status</h3><div id="byStatus"></div></div>
+    </div>
+  </div>
+  <div class="card">
+    <h2>User management</h2>
+    <p class="sub">Applicants, recruiters and admins. Deleting a user removes their dependent records.</p>
+    <div id="userList"></div>
+  </div>
+</div>
+<script src="js/common.js"></script>
+<script src="js/admin.js"></script>
+</body>
+</html>
