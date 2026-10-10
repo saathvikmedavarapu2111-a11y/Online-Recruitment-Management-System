@@ -191,4 +191,3 @@ def test_cleanup():
         "DELETE FROM users WHERE email IN (%s, %s)",
         (APPLICANT_EMAIL, RECRUITER_EMAIL),
     )
-    db.close_pool()

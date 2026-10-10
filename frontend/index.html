@@ -3,41 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SmartRecruit — Sign in</title>
-<link rel="stylesheet" href="css/style.css">
+<title>SmartRecruit — AI Hiring Platform</title>
+<meta name="description" content="SmartRecruit: AI-integrated online recruitment management. Screen candidates with explainable AI, track pipelines, schedule interviews.">
+<link rel="stylesheet" href="styles.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%238b5cf6'/%3E%3Ctext x='16' y='22' font-size='17' font-family='system-ui' font-weight='700' fill='white' text-anchor='middle'%3ES%3C/text%3E%3C/svg%3E">
 </head>
 <body>
-<div class="center">
-  <div class="card login-card">
-    <h1>SMART RECRUIT</h1>
-    <p class="tag">AI-Integrated Online Recruitment Management System</p>
-
-    <div class="roletabs" id="roleTabs"></div>
-
-    <div id="loginForm">
-      <label>Email address</label>
-      <input id="liEmail" type="email" placeholder="you@example.com">
-      <label>Password</label>
-      <input id="liPass" type="password" placeholder="••••••••">
-      <button class="btn" style="width:100%" onclick="doLogin()">Sign In</button>
-      <p class="center-text">New here? <span class="link" onclick="showReg()">Create an account</span></p>
-    </div>
-
-    <div id="regForm" class="hidden">
-      <label>Full name</label>
-      <input id="rgName" placeholder="Your name">
-      <label>Email address</label>
-      <input id="rgEmail" type="email" placeholder="you@example.com">
-      <label>Password (min 6 characters)</label>
-      <input id="rgPass" type="password" placeholder="••••••••">
-      <button class="btn" style="width:100%" onclick="doRegister()">Create Account</button>
-      <p class="center-text">Have an account? <span class="link" onclick="showLogin()">Sign in</span></p>
-    </div>
-
-    <p class="center-text muted" style="margin-top:18px">Demo: admin@smartrecruit.app / admin123</p>
-  </div>
-</div>
-<script src="js/common.js"></script>
-<script src="js/login.js"></script>
+<div id="app"></div>
+<div id="modal-root"></div>
+<div id="toast-root" aria-live="polite"></div>
+<script src="app.js"></script>
 </body>
 </html>

@@ -4,9 +4,6 @@ Copy `.env.example` to `.env` and set DATABASE_URL there.
 """
 import os
 from dataclasses import dataclass
-from dotenv import load_dotenv
-
-load_dotenv()
 
 
 def _get(name: str, default: str = "") -> str:
