@@ -10,6 +10,19 @@
 /* ============================== DATA ============================== */
 /* Live data: all entities come from the FastAPI + PostgreSQL backend
    (see DATA LAYER below). No demo seeds. */
+/* ---- match helpers (client-side badges mirror app/ai/matcher.py) ---- */
+const DEGREE_KW=['phd','m.tech','b.tech','m.sc','b.sc','mba','bca','mca','bachelor','master'];
+function splitSkills(s){ return String(s||'').split(',').map(x=>x.trim().toLowerCase()).filter(Boolean); }
+function eduScore(candQual, jobQual){
+  const job=(jobQual||'').toLowerCase();
+  if(!job.trim()) return 1;
+  const cand=(candQual||'').toLowerCase();
+  const candD=new Set(DEGREE_KW.filter(d=>cand.includes(d)));
+  const jobD=new Set(DEGREE_KW.filter(d=>job.includes(d)));
+  for(const d of candD){ if(jobD.has(d)) return 1; }
+  return candD.size?0.6:0;
+}
+
 function scoreCandidate(cand, job){
   // Strict, resume-aware screening:
   // a required skill counts 1.0 if evidenced in the resume, 0.6 if only claimed on the profile, 0 if absent.
@@ -562,7 +575,7 @@ function renderJobGrid(q){
       ${match!==null?`<div class="score-line"><span style="font-size:12px;color:var(--gray)">Your match</span><span class="bar"><i style="width:${match}%"></i></span><b>${match}%</b></div>`:''}
       <div class="foot"><span class="count-pill">${n} applicant${n===1?'':'s'}</span>
         <span style="display:flex;gap:8px">${action}</span></div></div>`;}).join('')
-    :'${emptyState("No jobs match your search","Try a different title, company or skill.")}';
+    :emptyState("No jobs match your search","Try a different title, company or skill.");
 }
 /* ---- full job profile + guided apply ---- */
 function openJobProfile(jid){
@@ -870,7 +883,7 @@ function vInterviews(){
           <div class="req-meta">${esc(j?j.company:'')} · your AI match ${j?scoreCandidate(me,j).score:0}%</div></div>
           <div class="req-actions"><button class="btn sm" onclick="openRequestInterview('${a.jobId}')">Request interview</button></div>
         </div>`;}).join('')
-      :'${emptyState("Nothing waiting","Approved applications will appear here.",ICONS.check)}'}
+      :emptyState("Nothing waiting","Approved applications will appear here.",ICONS.check)}
     </div>`:''}
     ${!isApplicant?`
     <div class="panel mb"><h3>Interview requests ${proposed.length?`<span class="count-pill">${proposed.length} pending</span>`:''}</h3>
