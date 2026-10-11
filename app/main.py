@@ -59,26 +59,19 @@ def health():
 
 
 # ---------------------------------------------------------------------
-# Frontend (vanilla HTML/CSS/JS in ./frontend)
+# Frontend (single-page app in ./frontend: index.html + styles.css + app.js)
+# Hash routing means the browser only ever requests / and the assets;
+# the mount below serves them, and API routes registered above win.
 # ---------------------------------------------------------------------
 _FRONTEND = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend")
 
 if os.path.isdir(_FRONTEND):
-    app.mount("/css", StaticFiles(directory=os.path.join(_FRONTEND, "css")),
-              name="css")
-    app.mount("/js", StaticFiles(directory=os.path.join(_FRONTEND, "js")),
-              name="js")
 
     @app.get("/", include_in_schema=False)
     def index():
         return FileResponse(os.path.join(_FRONTEND, "index.html"))
 
-    @app.get("/{page}.html", include_in_schema=False)
-    def page(page: str):
-        path = os.path.join(_FRONTEND, f"{page}.html")
-        if not os.path.isfile(path) or page.startswith("."):
-            return FileResponse(os.path.join(_FRONTEND, "index.html"))
-        return FileResponse(path)
+    app.mount("/", StaticFiles(directory=_FRONTEND, html=True), name="frontend")
 
 
 @app.on_event("shutdown")
