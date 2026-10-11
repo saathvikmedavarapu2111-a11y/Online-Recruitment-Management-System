@@ -54,7 +54,7 @@ function parseResumeText(text){
 /* ============================== DATA LAYER (live API) ============================== */
 /* The UI below is unchanged; every read/write now goes to the FastAPI +
    PostgreSQL backend. In-memory caches mirror the API in SPA shapes. */
-const API_BASE = window.__SR_API_BASE || 'https://smartrecruit-api.onrender.com';
+const API_BASE = window.__SR_API_BASE || 'https://smartrecruit-api-zuqh.onrender.com';
 
 let apiToken = null, apiUser = null;
 try {
