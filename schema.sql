@@ -42,12 +42,15 @@ CREATE TABLE IF NOT EXISTS jobs (
     recruiter_id         INTEGER NOT NULL
                          REFERENCES users (user_id) ON DELETE CASCADE,
     title                VARCHAR(160) NOT NULL,
+    company              VARCHAR(160),
     description          TEXT,
     required_skills      TEXT NOT NULL,           -- comma-separated
     qualification        VARCHAR(200),
     min_experience_years NUMERIC(4, 1) NOT NULL DEFAULT 0,
     location             VARCHAR(120),
     employment_type      VARCHAR(40) NOT NULL DEFAULT 'Full-time',
+    salary_range         VARCHAR(60),
+    openings             INTEGER NOT NULL DEFAULT 1,
     is_active            BOOLEAN NOT NULL DEFAULT TRUE,
     created_at           TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -62,8 +65,8 @@ CREATE TABLE IF NOT EXISTS applications (
     job_id         INTEGER NOT NULL
                    REFERENCES jobs (job_id) ON DELETE CASCADE,
     status         VARCHAR(30) NOT NULL DEFAULT 'applied'
-                   CHECK (status IN ('applied', 'screening', 'interview',
-                                     'offer', 'rejected', 'hired')),
+                   CHECK (status IN ('applied', 'screening', 'shortlisted',
+                                     'interview', 'offer', 'rejected', 'hired')),
     applied_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     UNIQUE (candidate_id, job_id)                 -- can't apply twice
 );
@@ -79,6 +82,13 @@ CREATE TABLE IF NOT EXISTS interviews (
     mode           VARCHAR(30) NOT NULL DEFAULT 'online'
                    CHECK (mode IN ('online', 'in-person', 'phone')),
     interviewer    VARCHAR(120),
+    -- Lifecycle: applicant-proposed slots start as 'proposed' until the
+    -- recruiter accepts (→ 'scheduled') or declines (→ 'declined').
+    -- Recruiter-booked interviews are 'scheduled' directly.
+    status         VARCHAR(30) NOT NULL DEFAULT 'scheduled'
+                   CHECK (status IN ('proposed', 'scheduled', 'declined',
+                                     'cancelled', 'completed')),
+    message        TEXT,                          -- applicant's note on a proposal
     feedback       TEXT,
     result         VARCHAR(30) NOT NULL DEFAULT 'pending'
                    CHECK (result IN ('pending', 'selected', 'rejected')),

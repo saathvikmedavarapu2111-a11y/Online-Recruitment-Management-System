@@ -137,8 +137,16 @@ def test_screening_scores_and_ranks():
     body = r.json()
     assert body["scored"] == 1
     top = body["ranking"][0]
-    assert top["score"] > 80  # python+postgresql matched, 2/2 skills
+    # strict: no resume -> both skills are profile claims (0.6 each)
+    # 100*(0.65*0.6 + 0.20*1 + 0.15*1) = 74.0
+    assert top["score"] == 74.0, top
     assert "python" in (top["matched_skills"] or "")
+    # GET returns the stored ranking plus live per-skill evidence
+    r = client.get(f"/api/screening/job/{state['job_id']}", headers=h)
+    assert r.status_code == 200
+    ev = {e["skill"]: e["status"]
+          for e in r.json()[0]["skill_evidence"]}
+    assert ev == {"python": "claimed", "postgresql": "claimed"}
 
 
 def test_status_update_and_interview():
@@ -164,6 +172,56 @@ def test_status_update_and_interview():
     ha = _auth(APPLICANT_EMAIL)
     r = client.get("/api/interviews/me", headers=ha)
     assert r.status_code == 200 and len(r.json()) == 1
+
+
+def test_interview_proposal_flow():
+    ha = _auth(APPLICANT_EMAIL)
+    h = _auth(RECRUITER_EMAIL)
+    # clear the interview scheduled by the previous test for this application
+    r = client.get("/api/interviews",
+                   params={"application_id": state["application_id"]}, headers=h)
+    for iv in r.json():
+        client.delete(f"/api/interviews/{iv['interview_id']}", headers=h)
+    # applicant proposes a slot for the approved (interview-stage) application
+    r = client.post(
+        "/api/interviews/propose",
+        json={
+            "application_id": state["application_id"],
+            "scheduled_on": "2030-02-01T11:00:00Z",
+            "mode": "online",
+            "message": "Morning works best for me",
+        },
+        headers=ha,
+    )
+    assert r.status_code == 201, r.text
+    assert r.json()["status"] == "proposed"
+    pid = r.json()["interview_id"]
+    # duplicate proposal is rejected
+    r = client.post(
+        "/api/interviews/propose",
+        json={"application_id": state["application_id"],
+              "scheduled_on": "2030-02-02T11:00:00Z",
+              "mode": "online"},
+        headers=ha,
+    )
+    assert r.status_code == 409
+    # recruiter sees the proposal
+    r = client.get("/api/interviews", params={"status": "proposed"}, headers=h)
+    assert r.status_code == 200
+    assert any(i["interview_id"] == pid and i["message"] == "Morning works best for me"
+               for i in r.json())
+    # recruiter accepts it -> scheduled
+    r = client.patch(f"/api/interviews/{pid}/respond",
+                     json={"action": "accept"}, headers=h)
+    assert r.status_code == 200 and r.json()["status"] == "scheduled"
+    # accepting twice is rejected
+    r = client.patch(f"/api/interviews/{pid}/respond",
+                     json={"action": "decline"}, headers=h)
+    assert r.status_code == 409
+    # applicant cannot use the recruiter-only respond endpoint
+    r = client.patch(f"/api/interviews/{pid}/respond",
+                     json={"action": "accept"}, headers=ha)
+    assert r.status_code == 403
 
 
 def test_applicant_cannot_reach_recruiter_routes():

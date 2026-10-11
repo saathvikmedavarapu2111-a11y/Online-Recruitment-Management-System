@@ -46,6 +46,7 @@ def test_extract_qualification():
 def test_matcher_perfect_candidate_scores_high():
     candidate = {
         "skills": "python, django, postgresql, rest, docker",
+        "resume_text": RESUME,  # evidences python, django, postgresql, rest
         "experience_years": 3.0,
         "qualification": "B.Tech Computer Science",
     }
@@ -58,6 +59,54 @@ def test_matcher_perfect_candidate_scores_high():
     assert r["score"] == 100.0
     assert r["matched_skills"] == ["django", "postgresql", "python", "rest"]
     assert r["missing_skills"] == []
+    assert r["verified_skills"] == ["django", "postgresql", "python", "rest"]
+    assert r["claimed_skills"] == []
+
+
+def test_matcher_strict_profile_claims_are_discounted():
+    # Same candidate, but no resume: every required skill is a mere
+    # profile claim -> 0.6 each -> 100*(0.65*0.6 + 0.20*1 + 0.15*1) = 74.0
+    candidate = {
+        "skills": "python, django, postgresql, rest, docker",
+        "resume_text": "",
+        "experience_years": 3.0,
+        "qualification": "B.Tech Computer Science",
+    }
+    job = {
+        "required_skills": "python, django, postgresql, rest",
+        "min_experience_years": 2.0,
+        "qualification": "B.Tech Computer Science",
+    }
+    r = score_candidate(candidate, job)
+    assert r["score"] == 74.0
+    assert r["verified_skills"] == []
+    assert r["claimed_skills"] == ["django", "postgresql", "python", "rest"]
+    assert r["missing_skills"] == []
+    ev = {e["skill"]: e["status"] for e in r["skill_evidence"]}
+    assert set(ev.values()) == {"claimed"}
+
+
+def test_matcher_mixed_evidence():
+    candidate = {
+        "skills": "python, django, postgresql, rest",
+        # resume evidences python + django only
+        "resume_text": "Built APIs with Python and Django for 2 years.",
+        "experience_years": 2.0,
+        "qualification": "B.Tech",
+    }
+    job = {
+        "required_skills": "python, django, postgresql, rest",
+        "min_experience_years": 2.0,
+        "qualification": "B.Tech",
+    }
+    r = score_candidate(candidate, job)
+    # skill = (1 + 1 + 0.6 + 0.6) / 4 = 0.8
+    assert r["breakdown"]["skill_score"] == 0.8
+    assert r["verified_skills"] == ["django", "python"]
+    assert r["claimed_skills"] == ["postgresql", "rest"]
+    ev = {e["skill"]: e["status"] for e in r["skill_evidence"]}
+    assert ev == {"python": "evidenced", "django": "evidenced",
+                  "postgresql": "claimed", "rest": "claimed"}
 
 
 def test_matcher_weak_candidate_scores_low():

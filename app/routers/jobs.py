@@ -7,9 +7,9 @@ from ..security import get_current_user, require_recruiter
 
 router = APIRouter(prefix="/api/jobs", tags=["jobs"])
 
-_JOB_COLS = """j.job_id, j.recruiter_id, j.title, j.description, j.required_skills,
+_JOB_COLS = """j.job_id, j.recruiter_id, j.title, j.company, j.description, j.required_skills,
                j.qualification, j.min_experience_years, j.location,
-               j.employment_type, j.is_active, j.created_at"""
+               j.employment_type, j.salary_range, j.openings, j.is_active, j.created_at"""
 
 
 @router.get("")
@@ -90,16 +90,16 @@ def _owned_job(job_id: int, recruiter_id: int) -> dict:
 @router.post("", status_code=status.HTTP_201_CREATED)
 def create_job(data: JobIn, user: dict = Depends(require_recruiter)):
     return db.execute_returning(
-        """INSERT INTO jobs (recruiter_id, title, description, required_skills,
+        """INSERT INTO jobs (recruiter_id, title, company, description, required_skills,
                              qualification, min_experience_years, location,
-                             employment_type, is_active)
-           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                             employment_type, salary_range, openings, is_active)
+           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
            RETURNING job_id""",
         (
-            user["user_id"], data.title.strip(), data.description,
+            user["user_id"], data.title.strip(), data.company, data.description,
             data.required_skills.strip().lower(), data.qualification,
             data.min_experience_years, data.location, data.employment_type,
-            data.is_active,
+            data.salary_range, data.openings, data.is_active,
         ),
     )
 
@@ -108,15 +108,16 @@ def create_job(data: JobIn, user: dict = Depends(require_recruiter)):
 def update_job(job_id: int, data: JobIn, user: dict = Depends(require_recruiter)):
     _owned_job(job_id, user["user_id"])
     db.execute(
-        """UPDATE jobs SET title=%s, description=%s, required_skills=%s,
+        """UPDATE jobs SET title=%s, company=%s, description=%s, required_skills=%s,
                           qualification=%s, min_experience_years=%s,
-                          location=%s, employment_type=%s, is_active=%s
+                          location=%s, employment_type=%s, salary_range=%s,
+                          openings=%s, is_active=%s
            WHERE job_id=%s""",
         (
-            data.title.strip(), data.description,
+            data.title.strip(), data.company, data.description,
             data.required_skills.strip().lower(), data.qualification,
             data.min_experience_years, data.location, data.employment_type,
-            data.is_active, job_id,
+            data.salary_range, data.openings, data.is_active, job_id,
         ),
     )
     return {"ok": True}

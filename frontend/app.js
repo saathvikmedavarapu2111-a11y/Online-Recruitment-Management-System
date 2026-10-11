@@ -1,381 +1,20 @@
-/* SmartRecruit presentation site — demo SPA.
-   Data mirrors seed.sql (labeled demo). Scoring is a faithful JS port of
-   app/ai/matcher.py: score = 100*(0.65*skill + 0.20*exp + 0.15*edu). */
+/* SmartRecruit — live SPA.
+   All data comes from the FastAPI + PostgreSQL backend (API_BASE).
+   Client-side match badges use the same strict, resume-aware formula as
+   app/ai/matcher.py: score = 100*(0.65*skill + 0.20*exp + 0.15*edu),
+   where a required skill earns 1.0 evidenced in the resume, 0.6 claimed
+   on the profile only, 0 missing. The recruiter Screening page uses the
+   backend's authoritative ranking. */
 'use strict';
 
 /* ============================== DATA ============================== */
-const CANDIDATES = [
-  { id:'c1', name:'Aarav Mehta', email:'aarav.mehta@example.com', phone:'+91 98200 11223',
-    location:'Bengaluru', headline:'Backend Developer', dept:'Engineering',
-    skills:'python, django, postgresql, rest, docker', exp:3.0, qual:'B.Tech Computer Science',
-    appliedOn:'02 Oct 2026', active:true },
-  { id:'c2', name:'Sneha Rao', email:'sneha.rao@example.com', phone:'+91 98200 44556',
-    location:'Hyderabad', headline:'Java Developer', dept:'Engineering',
-    skills:'java, spring, postgresql, microservices', exp:2.0, qual:'B.Tech Information Technology',
-    appliedOn:'03 Oct 2026', active:true },
-  { id:'c3', name:'Vikram Nair', email:'vikram.nair@example.com', phone:'+91 98200 77889',
-    location:'Chennai', headline:'Frontend Developer', dept:'Engineering',
-    skills:'javascript, react, node.js, css', exp:1.5, qual:'B.Sc Computer Science',
-    appliedOn:'04 Oct 2026', active:true },
-  { id:'c4', name:'Divya Patel', email:'divya.patel@example.com', phone:'+91 98200 99001',
-    location:'Pune', headline:'Data Analyst', dept:'Data Science',
-    skills:'python, pandas, sql, machine learning', exp:2.5, qual:'M.Sc Data Science',
-    appliedOn:'05 Oct 2026', active:false },
-  { id:'c5', name:'Priya Sharma', email:'priya.sharma@example.com', phone:'+91 98200 22334',
-    location:'Mumbai', headline:'Frontend Developer', dept:'Engineering',
-    skills:'javascript, typescript, react, css', exp:2.5, qual:'B.Tech Computer Science',
-    appliedOn:'06 Oct 2026', active:true },
-  { id:'c6', name:'Rahul Verma', email:'rahul.verma@example.com', phone:'+91 98200 33445',
-    location:'Delhi', headline:'DevOps Engineer', dept:'Engineering',
-    skills:'docker, kubernetes, aws, terraform, linux', exp:4.0, qual:'B.Tech Information Technology',
-    appliedOn:'07 Oct 2026', active:true },
-  { id:'c7', name:'Ananya Iyer', email:'ananya.iyer@example.com', phone:'+91 98200 44567',
-    location:'Bengaluru', headline:'ML Engineer', dept:'Data Science',
-    skills:'python, machine learning, tensorflow, sql', exp:3.0, qual:'M.Tech Artificial Intelligence',
-    appliedOn:'08 Oct 2026', active:true },
-  { id:'c8', name:'Karan Malhotra', email:'karan.malhotra@example.com', phone:'+91 98200 55678',
-    location:'Hyderabad', headline:'QA Engineer', dept:'Engineering',
-    skills:'selenium, python, testing, ci/cd', exp:2.0, qual:'B.Sc Computer Science',
-    appliedOn:'09 Oct 2026', active:true },
-  { id:'c9', name:'Ishita Bose', email:'ishita.bose@example.com', phone:'+91 98200 66789',
-    location:'Kolkata', headline:'UI/UX Designer', dept:'Design',
-    skills:'figma, prototyping, user research, css', exp:3.5, qual:'B.Des Communication Design',
-    appliedOn:'10 Oct 2026', active:true },
-  { id:'c10', name:'Aditya Rao', email:'aditya.rao@example.com', phone:'+91 98200 77890',
-    location:'Chennai', headline:'Backend Developer', dept:'Engineering',
-    skills:'java, spring, mysql, microservices', exp:5.0, qual:'B.Tech Computer Science',
-    appliedOn:'11 Oct 2026', active:true },
-  { id:'c11', name:'Neha Kulkarni', email:'neha.kulkarni@example.com', phone:'+91 98200 88901',
-    location:'Pune', headline:'Data Analyst', dept:'Data Science',
-    skills:'sql, python, excel, tableau', exp:1.5, qual:'B.Sc Statistics',
-    appliedOn:'12 Oct 2026', active:true },
-  { id:'c12', name:'Arjun Reddy', email:'arjun.reddy@example.com', phone:'+91 98200 99012',
-    location:'Hyderabad', headline:'Product Manager', dept:'Product',
-    skills:'roadmap, agile, sql, analytics', exp:4.5, qual:'MBA',
-    appliedOn:'13 Oct 2026', active:true },
-];
-const JOBS = [
-  { id:'j1', title:'Backend Developer', company:'FinEdge Technologies', location:'Bengaluru', type:'Full-time',
-    salary:'₹12–18 LPA', openings:3,
-    desc:'Build and maintain REST APIs for our fintech platform.',
-    about:'FinEdge is a growing fintech startup processing over 2M transactions a day. You will join a 12-person engineering team owning services end to end.',
-    resp:['Design and build REST APIs with Python and Django','Own PostgreSQL schema design and query optimisation','Ship containerised services with Docker','Participate in code reviews and on-call rotation'],
-    skills:'python, django, postgresql, rest', qual:'B.Tech Computer Science', exp:2.0, posted:'28 Sep 2026' },
-  { id:'j2', title:'Frontend Developer', company:'BrightKart Retail', location:'Chennai', type:'Full-time',
-    salary:'₹8–12 LPA', openings:2,
-    desc:'Build responsive customer-facing interfaces.',
-    about:'BrightKart serves 5M shoppers a month. Our storefront team cares deeply about performance and polish.',
-    resp:['Build responsive interfaces with React','Own UI performance budgets and accessibility','Work with designers on a shared component library'],
-    skills:'javascript, react, css', qual:'B.Sc Computer Science', exp:1.0, posted:'29 Sep 2026' },
-  { id:'j3', title:'Data Analyst', company:'HealthLoop Analytics', location:'Pune', type:'Full-time',
-    salary:'₹10–14 LPA', openings:2,
-    desc:'SQL analytics and reporting for product teams.',
-    about:'HealthLoop turns hospital operations data into decisions. Small data team, large ownership.',
-    resp:['Write SQL analyses and build recurring reports','Partner with product on experiment readouts','Maintain dashboards used by leadership'],
-    skills:'python, sql, pandas', qual:'M.Sc Data Science', exp:2.0, posted:'30 Sep 2026' },
-  { id:'j4', title:'DevOps Engineer', company:'FinEdge Technologies', location:'Bengaluru', type:'Full-time',
-    salary:'₹14–20 LPA', openings:1,
-    desc:'Own CI/CD pipelines and cloud infrastructure on AWS.',
-    about:'FinEdge runs entirely on AWS. You will keep 40+ services deploying safely, several times a day.',
-    resp:['Own Kubernetes clusters and Terraform modules','Build CI/CD pipelines with zero-downtime deploys','Drive monitoring, alerting and incident response'],
-    skills:'docker, kubernetes, aws', qual:'B.Tech Computer Science', exp:3.0, posted:'01 Oct 2026' },
-  { id:'j5', title:'ML Engineer', company:'VisionCraft AI', location:'Bengaluru', type:'Full-time',
-    salary:'₹16–24 LPA', openings:2,
-    desc:'Build and ship machine-learning models to production.',
-    about:'VisionCraft builds vision models for retail. Research-friendly team with a strong MLOps culture.',
-    resp:['Train and evaluate models with TensorFlow','Ship models behind production APIs','Build data pipelines for training and monitoring'],
-    skills:'python, machine learning, tensorflow', qual:'M.Tech Artificial Intelligence', exp:2.0, posted:'02 Oct 2026' },
-  { id:'j6', title:'UI/UX Designer', company:'BrightKart Retail', location:'Remote', type:'Full-time',
-    salary:'₹9–13 LPA', openings:1,
-    desc:'Design intuitive product experiences from research to prototype.',
-    about:'BrightKart’s design team of six owns the end-to-end shopper journey across web and mobile.',
-    resp:['Run user research and usability tests','Produce prototypes in Figma','Maintain and evolve the design system'],
-    skills:'figma, prototyping, user research', qual:'B.Des', exp:2.0, posted:'03 Oct 2026' },
-  { id:'j7', title:'QA Engineer', company:'FinEdge Technologies', location:'Hyderabad', type:'Full-time',
-    salary:'₹7–10 LPA', openings:2,
-    desc:'Automate testing and guard release quality.',
-    about:'Quality is a first-class function at FinEdge — QA engineers pair directly with developers.',
-    resp:['Build Selenium test automation suites','Own regression and release sign-off','Integrate tests into CI pipelines'],
-    skills:'selenium, python, testing', qual:'B.Sc Computer Science', exp:1.5, posted:'04 Oct 2026' },
-  { id:'j8', title:'Product Manager', company:'VisionCraft AI', location:'Bengaluru', type:'Full-time',
-    salary:'₹18–26 LPA', openings:1,
-    desc:'Own the roadmap for our hiring platform.',
-    about:'VisionCraft is launching an AI hiring product. You will own discovery, roadmap and launch.',
-    resp:['Own roadmap and prioritisation','Run discovery with customers and data','Define success metrics and launch plans'],
-    skills:'roadmap, agile, analytics', qual:'MBA', exp:3.0, posted:'05 Oct 2026' },
-];
-// application status per (candidate -> job); default 'applied'
-const APP_STATUS = {
-  c1:{j1:'interview'},
-  c2:{j1:'screening'},
-  c3:{j1:'applied', j2:'interview'},
-  c4:{j1:'applied', j3:'screening'},
-  c5:{j2:'screening'},
-  c6:{j4:'interview'},
-  c7:{j3:'interview', j5:'applied'},
-  c8:{j1:'screening', j7:'applied'},
-  c9:{j2:'applied', j6:'screening'},
-  c10:{j1:'applied'},
-  c11:{j3:'applied'},
-  c12:{j8:'applied'},
-};
-const DEMO_USERS = [
-  { name:'Meera Nair', email:'meera.nair@smartrecruit.app', pass:'password123', role:'recruiter' },
-  { name:'Aarav Mehta', email:'aarav.mehta@example.com', pass:'password123', role:'applicant' },
-  { name:'Site Administrator', email:'admin@smartrecruit.app', pass:'admin123', role:'admin' },
-];
-const DEGREE_KW = ['phd','m.tech','b.tech','m.sc','b.sc','mba','bca','mca','bachelor','master'];
-
-/* ====================== SCORING (matcher.py port) ====================== */
-function splitSkills(csv){ return (csv||'').split(',').map(s=>s.trim().toLowerCase()).filter(Boolean); }
-function eduScore(candQual, jobQual){
-  const c=(candQual||'').toLowerCase(), j=(jobQual||'').toLowerCase();
-  if(!j.trim()) return 1.0;
-  const cd=DEGREE_KW.filter(d=>c.includes(d)), jd=DEGREE_KW.filter(d=>j.includes(d));
-  if(cd.some(d=>jd.includes(d))) return 1.0;
-  return cd.length ? 0.6 : 0.0;
-}
-/* ---- seeded realistic resumes (demo data) ---- */
-const RESUME_SEEDS = {
-c1:`AARAV MEHTA
-Backend Developer | Bengaluru
-aarav.mehta@example.com | +91 98200 11223
-
-SUMMARY
-Backend developer with 3 years of experience designing and shipping REST APIs for high-traffic fintech services.
-
-SKILLS
-Python, Django, PostgreSQL, REST, Docker
-
-EXPERIENCE
-Backend Developer — FinEdge Technologies, Bengaluru (2023–present)
-- Built REST APIs with Python and Django serving 2M requests per day
-- Designed PostgreSQL schemas and optimised slow queries, cutting p95 latency by 40%
-- Containerised services with Docker and owned CI deployments
-- 3 years of production backend experience
-
-EDUCATION
-B.Tech Computer Science`,
-c2:`SNEHA RAO
-Java Developer | Hyderabad
-sneha.rao@example.com | +91 98200 44556
-
-SUMMARY
-Java developer with 2 years of experience building microservices with Spring Boot.
-
-SKILLS
-Java, Spring, PostgreSQL, Microservices
-
-EXPERIENCE
-Software Engineer — CloudNine Systems, Hyderabad (2024–present)
-- Developed microservices in Java and Spring Boot for a logistics platform
-- Worked with PostgreSQL for persistence and service-to-service REST contracts
-- Participated in code reviews and sprint planning in an agile team
-
-EDUCATION
-B.Tech Information Technology`,
-c3:`VIKRAM NAIR
-Frontend Developer | Chennai
-vikram.nair@example.com | +91 98200 77889
-
-SUMMARY
-Frontend developer with 1.5 years of experience building responsive web apps with React.
-
-SKILLS
-JavaScript, React, Node.js, CSS
-
-EXPERIENCE
-Frontend Developer — PixelWorks Studio, Chennai (2025–present)
-- Built responsive interfaces with React and modern CSS
-- Integrated REST APIs and handled client-side state
-- 1.5 years of professional frontend experience
-
-EDUCATION
-B.Sc Computer Science`,
-c4:`DIVYA PATEL
-Data Analyst | Pune
-divya.patel@example.com | +91 98200 99001
-
-SUMMARY
-Data analyst with 2.5 years of experience turning raw data into decisions with SQL and Python.
-
-SKILLS
-Python, Pandas, SQL, Machine Learning
-
-EXPERIENCE
-Data Analyst — HealthLoop Analytics, Pune (2024–present)
-- Wrote SQL analyses and built recurring reports with Python and Pandas
-- Built dashboards tracking product KPIs for leadership
-- Applied machine learning basics for churn analysis
-- 2.5 years of analytics experience
-
-EDUCATION
-M.Sc Data Science`,
-c5:`PRIYA SHARMA
-Frontend Developer | Mumbai
-priya.sharma@example.com | +91 98200 22334
-
-SUMMARY
-Frontend developer with 2.5 years of experience crafting polished, accessible interfaces.
-
-SKILLS
-JavaScript, TypeScript, React, CSS
-
-EXPERIENCE
-Frontend Developer — BrightKart Retail, Mumbai (2023–present)
-- Built a React component library adopted by 4 product teams
-- Shipped accessible, responsive pages with TypeScript and CSS
-- 2.5 years of frontend experience
-
-EDUCATION
-B.Tech Computer Science`,
-c6:`RAHUL VERMA
-DevOps Engineer | Delhi
-rahul.verma@example.com | +91 98200 33445
-
-SUMMARY
-DevOps engineer with 4 years of experience running production infrastructure on AWS.
-
-SKILLS
-Docker, Kubernetes, AWS, Terraform, Linux
-
-EXPERIENCE
-DevOps Engineer — FinEdge Technologies, Delhi (2022–present)
-- Manage Kubernetes clusters on AWS running 40+ services
-- Built Terraform modules and CI/CD pipelines with zero-downtime deploys
-- Own monitoring, alerting and incident response
-- 4 years of infrastructure experience
-
-EDUCATION
-B.Tech Information Technology`,
-c7:`ANANYA IYER
-ML Engineer | Bengaluru
-ananya.iyer@example.com | +91 98200 44567
-
-SUMMARY
-Machine learning engineer with 3 years of experience training and shipping models.
-
-SKILLS
-Python, Machine Learning, TensorFlow, SQL
-
-EXPERIENCE
-ML Engineer — VisionCraft AI, Bengaluru (2023–present)
-- Trained and evaluated models with TensorFlow for retail vision tasks
-- Built data pipelines with Python and SQL for training and monitoring
-- Shipped models behind production APIs
-- 3 years of ML experience
-
-EDUCATION
-M.Tech Artificial Intelligence`,
-c8:`KARAN MALHOTRA
-QA Engineer | Hyderabad
-karan.malhotra@example.com | +91 98200 55678
-
-SUMMARY
-QA engineer with 2 years of experience in test automation with Selenium and Python.
-
-SKILLS
-Selenium, Python, Testing, CI/CD
-
-EXPERIENCE
-QA Engineer — FinEdge Technologies, Hyderabad (2024–present)
-- Built Selenium test automation suites in Python
-- Integrated tests into CI/CD pipelines for release sign-off
-- 2 years of quality engineering experience
-
-EDUCATION
-B.Sc Computer Science`,
-c9:`ISHITA BOSE
-UI/UX Designer | Kolkata
-ishita.bose@example.com | +91 98200 66789
-
-SUMMARY
-Product designer with 3.5 years of experience from research to high-fidelity prototypes.
-
-SKILLS
-Figma, Prototyping, User Research, CSS
-
-EXPERIENCE
-Product Designer — BrightKart Retail, Kolkata (2022–present)
-- Ran user research and usability tests informing the checkout redesign
-- Produced prototypes in Figma and maintained the design system
-- 3.5 years of design experience
-
-EDUCATION
-B.Des Communication Design`,
-c10:`ADITYA RAO
-Backend Developer | Chennai
-aditya.rao@example.com | +91 98200 77890
-
-SUMMARY
-Backend developer with 5 years of experience building Java microservices at scale.
-
-SKILLS
-Java, Spring, MySQL, Microservices
-
-EXPERIENCE
-Senior Software Engineer — LogiServe, Chennai (2021–present)
-- Led development of Spring microservices processing 10M events daily
-- Designed MySQL schemas and optimised query performance
-- Mentored junior engineers; 5 years of backend experience
-
-EDUCATION
-B.Tech Computer Science`,
-c11:`NEHA KULKARNI
-Data Analyst | Pune
-neha.kulkarni@example.com | +91 98200 88901
-
-SUMMARY
-Data analyst with 1.5 years of experience in reporting and dashboarding.
-
-SKILLS
-SQL, Python, Excel, Tableau
-
-EXPERIENCE
-Data Analyst — RetailMetrics, Pune (2025–present)
-- Built Tableau dashboards and Excel reports for category managers
-- Wrote SQL queries for weekly business reviews
-- 1.5 years of analytics experience
-
-EDUCATION
-B.Sc Statistics`,
-c12:`ARJUN REDDY
-Product Manager | Hyderabad
-arjun.reddy@example.com | +91 98200 99012
-
-SUMMARY
-Product manager with 4.5 years of experience owning roadmaps for B2B SaaS products.
-
-SKILLS
-Roadmap, Agile, SQL, Analytics
-
-EXPERIENCE
-Product Manager — TalentFlow SaaS, Hyderabad (2021–present)
-- Owned roadmap and prioritisation for a hiring analytics product
-- Ran discovery with customers; defined success metrics with SQL and analytics
-- Led agile ceremonies across 3 squads
-- 4.5 years of product experience
-
-EDUCATION
-MBA`,
-};
-
-function seedResumes(){
-  const seeded={};
-  Object.keys(RESUME_SEEDS).forEach(cid=>{
-    const c=CANDIDATES.find(x=>x.id===cid);
-    const text=RESUME_SEEDS[cid];
-    const parsed=parseResumeText(text);
-    seeded[cid]={ name:c.name.split(' ').join('_')+'_Resume.txt', size:text.length,
-      type:'text/plain', uploadedOn:'02 Oct 2026', text, parsedSkills:parsed.skills };
-  });
-  return seeded;
-}
+/* Live data: all entities come from the FastAPI + PostgreSQL backend
+   (see DATA LAYER below). No demo seeds. */
 function scoreCandidate(cand, job){
   // Strict, resume-aware screening:
   // a required skill counts 1.0 if evidenced in the resume, 0.6 if only claimed on the profile, 0 if absent.
   const prof = splitSkills(cand.skills||'');
-  const rsk = resumeSkills(cand.id||'');
+  const rsk = resumeSkillList(cand);
   const need = splitSkills(job.skills);
   let credit=0; const verified=[], claimed=[], missing=[];
   need.forEach(s=>{
@@ -412,100 +51,135 @@ function parseResumeText(text){
   return {skills, exp, quals};
 }
 
-/* ============================== STATE ============================== */
-const store = {
-  get(k,d){ try{ const v=localStorage.getItem('sr_site_'+k); return v?JSON.parse(v):d; }catch{ return d; } },
-  set(k,v){ try{ localStorage.setItem('sr_site_'+k, JSON.stringify(v)); }catch{} },
-};
-let session = store.get('session', null);
-let extraCandidates = store.get('candidates', []);
-let extraUsers = store.get('extra_users', []);
-function seedInterviews(){
-  const d=new Date(); d.setDate(d.getDate()+2); d.setHours(11,0,0,0);
-  const d2=new Date(); d2.setDate(d2.getDate()-3); d2.setHours(15,30,0,0);
-  const d3=new Date(); d3.setDate(d3.getDate()+4); d3.setHours(10,0,0,0);
-  const d4=new Date(); d4.setDate(d4.getDate()+1); d4.setHours(16,0,0,0);
-  const iso=x=>x.toISOString().slice(0,16);
-  return [
-    { id:'i1', candId:'c1', jobId:'j1', when:iso(d), mode:'online', by:'Meera Nair',
-      feedback:'Strong API design answers; system-design round pending.', result:'pending' },
-    { id:'i2', candId:'c3', jobId:'j2', when:iso(d2), mode:'online', by:'Arjun Menon',
-      feedback:'Excellent React fundamentals and portfolio. Cleared for offer.', result:'hired' },
-    { id:'i3', candId:'c7', jobId:'j3', when:iso(d3), mode:'in-person', by:'Meera Nair',
-      feedback:'', result:'pending' },
-    { id:'i4', candId:'c6', jobId:'j4', when:iso(d4), mode:'phone', by:'Arjun Menon',
-      feedback:'', result:'pending' },
-  ];
+/* ============================== DATA LAYER (live API) ============================== */
+/* The UI below is unchanged; every read/write now goes to the FastAPI +
+   PostgreSQL backend. In-memory caches mirror the API in SPA shapes. */
+const API_BASE = window.__SR_API_BASE || 'https://smartrecruit-api.onrender.com';
+
+let apiToken = null, apiUser = null;
+try {
+  apiToken = localStorage.getItem('sr_token');
+  apiUser = JSON.parse(localStorage.getItem('sr_user') || 'null');
+} catch { /* fresh session */ }
+let session = apiUser ? { name: apiUser.name, email: apiUser.email, role: apiUser.role, user_id: apiUser.user_id } : null;
+
+async function api(path, opts = {}) {
+  const res = await fetch(API_BASE + path, {
+    method: opts.method || 'GET',
+    headers: Object.assign(
+      { 'Content-Type': 'application/json' },
+      apiToken ? { Authorization: 'Bearer ' + apiToken } : {},
+      opts.headers || {}
+    ),
+    body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
+  });
+  const text = await res.text();
+  let data = null;
+  try { data = text ? JSON.parse(text) : null; } catch { data = text; }
+  if (!res.ok) {
+    const detail = (data && data.detail) || text || ('HTTP ' + res.status);
+    const err = new Error(typeof detail === 'string' ? detail : JSON.stringify(detail));
+    err.status = res.status;
+    throw err;
+  }
+  return data;
 }
-let interviews = store.get('interviews', null);
-if(!interviews || !interviews.length){ interviews = seedInterviews(); store.set('interviews', interviews); }
-// interview requests: applicant proposes a slot -> recruiter accepts/declines
-function seedRequests(){
-  const d1=new Date(); d1.setDate(d1.getDate()+3); d1.setHours(14,0,0,0);
-  const d2=new Date(); d2.setDate(d2.getDate()+2); d2.setHours(11,30,0,0);
-  const iso=x=>x.toISOString().slice(0,16);
-  return [
-    { id:'r1', candId:'c5', jobId:'j2', status:'requested', createdOn:'09 Oct 2026',
-      when:iso(d1), mode:'online',
-      message:'I would love to discuss the frontend role — I built a component library used by 4 teams in my current job.' },
-    { id:'r2', candId:'c8', jobId:'j1', status:'requested', createdOn:'10 Oct 2026',
-      when:iso(d2), mode:'phone',
-      message:'Backend systems interest me and my Python testing experience transfers well. Keen to chat.' },
-  ];
+function setSession(token, user) {
+  apiToken = token; apiUser = user;
+  session = user ? { name: user.name, email: user.email, role: user.role, user_id: user.user_id } : null;
+  try {
+    if (token) { localStorage.setItem('sr_token', token); localStorage.setItem('sr_user', JSON.stringify(user)); }
+    else { localStorage.removeItem('sr_token'); localStorage.removeItem('sr_user'); }
+  } catch {}
 }
-let requests = store.get('requests', null);
-if(!requests || (requests.length && !requests[0].when)){ requests = seedRequests(); store.set('requests', requests); }
-// profile overrides + resumes (applicant-editable, recruiter-visible)
-let profileOverrides = store.get('profile_overrides', {});
-let resumes = store.get('resumes_v3', null);
-if(!resumes){
-  // fresh realistic seeds every version bump — old demo files are dropped on purpose
-  resumes = seedResumes();
-  store.set('resumes_v3', resumes);
+
+/* ---------- backend -> SPA shape mappers ---------- */
+const mapJob = j => ({
+  id: 'j' + j.job_id, job_id: j.job_id, title: j.title, company: j.company || '',
+  location: j.location || '', type: j.employment_type || 'Full-time',
+  salary: j.salary_range || '', openings: j.openings || 1,
+  desc: j.description || '', about: '', resp: [],
+  skills: j.required_skills || '', qual: j.qualification || '',
+  exp: parseFloat(j.min_experience_years) || 0,
+  posted: (j.created_at || '').slice(0, 10),
+});
+const mapCandidate = c => ({
+  id: 'c' + (c.candidate_id || c.user_id || 0), candidate_id: c.candidate_id,
+  name: c.name || '', email: c.email || '', phone: c.phone || '',
+  location: c.location || '', skills: c.skills || '',
+  exp: parseFloat(c.experience_years) || 0, qual: c.qualification || '',
+  headline: c.qualification || '',
+  resumeText: c.resume_text || '', resumeName: c.resume_filename || '',
+});
+const fmtDate = iso => { try { return new Date(iso).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }); } catch { return ''; } };
+const mapApplication = a => ({
+  id: 'a' + a.application_id, application_id: a.application_id,
+  candId: 'c' + a.candidate_id, jobId: 'j' + a.job_id,
+  status: a.status, appliedOn: fmtDate(a.applied_at), coverNote: '',
+  candidate_name: a.candidate_name || '', score: a.score,
+});
+const mapInterview = iv => ({
+  id: 'i' + iv.interview_id, interview_id: iv.interview_id,
+  appId: 'a' + iv.application_id, application_id: iv.application_id,
+  candId: 'c' + iv.candidate_id, jobId: 'j' + iv.job_id,
+  when: (iv.scheduled_on || '').slice(0, 16), mode: iv.mode,
+  status: iv.status || 'scheduled', message: iv.message || '',
+  by: iv.interviewer || '', feedback: iv.feedback || '', result: iv.result || 'pending',
+  candName: iv.candidate_name || '', jobTitle: iv.job_title || '',
+});
+
+/* ---------- in-memory caches (SPA shapes) ---------- */
+let JOBS = [], CANDIDATES = [], applications = [], interviews = [];
+let ME = null; // signed-in applicant's profile (mapped candidate)
+
+const jobById = id => JOBS.find(j => j.id === id);
+const candById = id => CANDIDATES.find(c => c.id === id);
+const getApp = (cid, jid) => applications.find(a => a.candId === cid && a.jobId === jid);
+const appStatus = (cid, jid) => { const a = getApp(cid, jid); return a ? a.status : null; };
+const candJobs = cid => applications.filter(a => a.candId === cid).map(a => a.jobId);
+const primaryJobId = cid => (candJobs(cid)[0] || (JOBS[0] && JOBS[0].id));
+const primaryStatus = cid => appStatus(cid, primaryJobId(cid));
+const jobApplicants = jid => [...new Set(applications.filter(a => a.jobId === jid).map(a => a.candId))].map(candById).filter(Boolean);
+const myCandidate = () => ME;
+
+/* resume skills for the strict scorer: parse the candidate's own resume text */
+const resumeSkillList = cand => {
+  if (!cand || !cand.resumeText) return [];
+  try { return parseResumeText(cand.resumeText).skills || []; } catch { return []; }
+};
+
+/* ---------- loaders ---------- */
+async function loadJobs() { JOBS = (await api('/api/jobs')).map(mapJob); }
+async function loadMyProfile() {
+  const p = await api('/api/applicants/me');
+  ME = mapCandidate(Object.assign({}, p, { name: session.name, email: session.email }));
 }
-const resumeSkills = cid => {
-  const r = resumes[cid];
-  if(!r) return [];
-  if(r.parsedSkills) return r.parsedSkills;
-  if(r.text){ const p=parseResumeText(r.text); r.parsedSkills=p.skills; return p.skills; }
-  return [];
-};
-let shortlisted = store.get('shortlisted', {});
-const allCandidates = ()=>{
-  const list=[...CANDIDATES, ...extraCandidates];
-  return list.map(c=>profileOverrides[c.id]?{...c, ...profileOverrides[c.id]}:c);
-};
-const candById = id=>allCandidates().find(c=>c.id===id);
-const jobById = id=>JOBS.find(j=>j.id===id);
-const myCandidate = ()=>{ // candidate record for the signed-in applicant
-  if(!session || session.role!=='applicant') return null;
-  return allCandidates().find(c=>c.email===session.email) || candById('c1');
-};
-// applications: the real pipeline records (seeded from APP_STATUS once)
-function seedApplications(){
-  const dates={c1:'02 Oct 2026',c2:'03 Oct 2026',c3:'04 Oct 2026',c4:'05 Oct 2026',c5:'06 Oct 2026',
-    c6:'07 Oct 2026',c7:'08 Oct 2026',c8:'09 Oct 2026',c9:'10 Oct 2026',c10:'11 Oct 2026',
-    c11:'12 Oct 2026',c12:'13 Oct 2026'};
-  const apps=[]; let n=0;
-  Object.keys(APP_STATUS).forEach(cid=>Object.keys(APP_STATUS[cid]).forEach(jid=>{
-    apps.push({id:'a'+(++n), candId:cid, jobId:jid, status:APP_STATUS[cid][jid],
-      appliedOn:dates[cid]||'10 Oct 2026', coverNote:''});
-  }));
-  return apps;
+async function loadMyApplications() { applications = (await api('/api/applications/me')).map(mapApplication); }
+async function loadMyInterviews() { interviews = (await api('/api/interviews/me')).map(mapInterview); }
+async function loadCandidates() { CANDIDATES = (await api('/api/applicants')).map(mapCandidate); }
+async function loadJobApplications(job_id) {
+  applications = (await api('/api/applications/job/' + job_id)).map(mapApplication);
+  const cands = (await api('/api/applicants')).map(mapCandidate);
+  const byId = {}; cands.forEach(c => byId[c.id] = c);
+  CANDIDATES = [...new Set(applications.map(a => a.candId))].map(id => byId[id]).filter(Boolean);
 }
-let applications = store.get('applications', null);
-if(!applications || !applications.length){ applications = seedApplications(); store.set('applications', applications); }
-const getApp=(cid,jid)=>applications.find(a=>a.candId===cid&&a.jobId===jid);
-const appStatus=(cid,jid)=>{
-  const a=getApp(cid,jid); if(!a) return null;
-  if(shortlisted[cid+':'+jid]) return 'shortlisted';
-  return a.status;
-};
-const setAppStatus=(cid,jid,st)=>{ const a=getApp(cid,jid); if(a){ a.status=st; store.set('applications',applications); } };
-const candJobs=cid=>applications.filter(a=>a.candId===cid).map(a=>a.jobId);
-const primaryJobId=cid=>(candJobs(cid)[0]||'j1');
-const primaryStatus=cid=>appStatus(cid,primaryJobId(cid));
-const jobApplicants=jid=>[...new Set(applications.filter(a=>a.jobId===jid).map(a=>a.candId))].map(candById).filter(Boolean);
+async function loadRecruiterInterviews(status) {
+  interviews = (await api('/api/interviews' + (status ? '?status=' + status : ''))).map(mapInterview);
+}
+async function refreshFor(role) {
+  await loadJobs();
+  if (role === 'applicant') {
+    await loadMyProfile(); await loadMyApplications(); await loadMyInterviews();
+    CANDIDATES = ME ? [ME] : [];
+  } else if (role === 'recruiter' || role === 'admin') {
+    await loadCandidates(); await loadRecruiterInterviews();
+    try {
+      const all = [];
+      for (const j of JOBS) { (await api('/api/applications/job/' + j.job_id)).forEach(a => all.push(mapApplication(a))); }
+      applications = all;
+    } catch { applications = []; }
+  }
+}
 
 /* ============================== HELPERS ============================== */
 const $ = s=>document.querySelector(s);
@@ -586,12 +260,27 @@ function footer(){
 function confirmLogout(){ openModal('Sign out', `<p style="font-size:14px;color:var(--gray)">Sign out of the demo workspace?</p>
   <div class="mt" style="display:flex;gap:10px;justify-content:flex-end"><button class="btn ghost sm" onclick="closeModal()">Cancel</button>
   <button class="btn sm" onclick="doLogout()">Sign out</button></div>`); }
-function doLogout(){ session=null; store.set('session',null); closeModal(); location.hash='#/login'; }
+function doLogout(){ setSession(null, null); closeModal(); location.hash='#/login'; }
+let _booted = false;
+async function boot(){
+  if(_booted) return; _booted = true;
+  try { await api('/api/health'); }
+  catch(e){ app.innerHTML = emptyState('Cannot reach the API', 'The backend at '+esc(API_BASE)+' is not responding. Please try again in a moment.', ICONS.x); return; }
+  if(apiToken && apiUser){
+    try {
+      const me = await api('/api/auth/me');
+      setSession(apiToken, me);
+      await refreshFor(me.role);
+    } catch { setSession(null, null); }
+  }
+  route();
+}
 
 /* ============================== ROUTER ============================== */
 const app=$('#app');
 function route(){
   const h=(location.hash||'#/login').replace('#/','');
+  if(!_booted){ boot(); return; }
   if(!session && h!=='login'){ location.hash='#/login'; return; }
   if(session && h==='login'){ location.hash = session.role==='applicant' ? '#/jobs' : '#/dashboard'; return; }
   if(session && session.role==='applicant' && !['jobs','interviews','profile','login'].includes(h)){ location.hash='#/jobs'; return; }
@@ -618,7 +307,7 @@ function vLogin(mode){
     </div>
     <div class="login-form">
       <h3>${isUp?'Create your account':'Welcome back'}</h3>
-      <p class="sub">${isUp?'Join as an applicant — apply in minutes.':'Sign in to the demo workspace.'}</p>
+      <p class="sub">${isUp?'Join as an applicant — apply in minutes.':'Sign in with your SmartRecruit account.'}</p>
       <form id="loginForm" novalidate>
         ${isUp?`<div class="field"><label for="nm">Full name</label><input id="nm" autocomplete="name" placeholder="Priya Sharma"><div class="err">Name is required.</div></div>`:''}
         <div class="field"><label for="em">Email</label><input id="em" type="email" autocomplete="username" placeholder="meera.nair@smartrecruit.app"><div class="err">Enter a valid email.</div></div>
@@ -635,44 +324,51 @@ function vLogin(mode){
   <p class="login-legal"><button class="linklike" onclick="openLegal('terms')">Terms of Service</button> · <button class="linklike" onclick="openLegal('privacy')">Privacy Policy</button></p></div>`;
   document.querySelectorAll('[data-fill]').forEach(b=>b.onclick=()=>{
     const [e,p]=b.dataset.fill.split('|'); $('#em').value=e; $('#pw').value=p; });
-  $('#loginForm').onsubmit=e=>{
+  $('#loginForm').onsubmit=async e=>{
     e.preventDefault();
     const em=$('#em').value.trim().toLowerCase(), pw=$('#pw').value;
     const emOk=/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em);
     $('#em').closest('.field').classList.toggle('invalid',!emOk);
     const pwOk=isUp?pw.length>=6:!!pw;
     $('#pw').closest('.field').classList.toggle('invalid',!pwOk);
+    const btn=e.target.querySelector('button[type=submit]');
     if(isUp){
       const nm=$('#nm').value.trim();
       $('#nm').closest('.field').classList.toggle('invalid',!nm);
       if(!emOk||!pwOk||!nm) return;
-      if(DEMO_USERS.some(u=>u.email===em)||extraUsers.some(u=>u.email===em)){ toast('An account with this email already exists','err'); return; }
-      const c={ id:'u'+Date.now(), name:nm, email:em, phone:'—', location:'—', headline:'Candidate',
-        dept:'Engineering', skills:'', exp:0, qual:'',
-        appliedOn:new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}), active:true };
-      extraCandidates.push(c); store.set('candidates',extraCandidates);
-      extraUsers.push({name:nm,email:em,pass:pw,role:'applicant'});
-      store.set('extra_users',extraUsers);
-      session={name:nm,email:em,role:'applicant'}; store.set('session',session);
-      toast('Account created — welcome, '+nm.split(' ')[0],'ok');
-      location.hash='#/jobs'; return;
+      btn.disabled=true;
+      try{
+        const r=await api('/api/auth/register',{method:'POST',body:{name:nm,email:em,password:pw,role:'applicant'}});
+        setSession(r.access_token, r.user);
+        await refreshFor('applicant');
+        toast('Account created — welcome, '+nm.split(' ')[0],'ok');
+        location.hash='#/jobs';
+      }catch(err){ toast(err.message||'Could not create the account','err'); btn.disabled=false; }
+      return;
     }
     if(!emOk||!pwOk) return;
-    const u=DEMO_USERS.find(x=>x.email===em && x.pass===pw)||extraUsers.find(x=>x.email===em && x.pass===pw);
-    if(!u){ toast('Invalid credentials — use a fill button or create an account.', 'err'); return; }
-    session={name:u.name,email:u.email,role:u.role}; store.set('session',session);
-    toast('Signed in as '+u.name,'ok');
-    location.hash = u.role==='applicant' ? '#/jobs' : '#/dashboard';
+    btn.disabled=true;
+    try{
+      const r=await api('/api/auth/login',{method:'POST',body:{email:em,password:pw}});
+      setSession(r.access_token, r.user);
+      await refreshFor(r.user.role);
+      toast('Signed in as '+r.user.name,'ok');
+      location.hash = r.user.role==='applicant' ? '#/jobs' : (r.user.role==='admin' ? '#/admin' : '#/dashboard');
+    }catch(err){ toast(err.message||'Invalid email or password','err'); btn.disabled=false; }
   };
 }
 
 /* ============================== DASHBOARD ============================== */
 function vDashboard(){
-  const cands=allCandidates();
+  if(session && session.role!=='applicant' && !window._dashLoading){
+    window._dashLoading=true;
+    (async()=>{ try{ await refreshFor(session.role); }catch{} window._dashLoading=false; vDashboard(); })();
+  }
+  const cands=CANDIDATES;
   const openJobs=JOBS.length, total=cands.length;
-  const upcoming=interviews.filter(i=>new Date(i.when)>new Date()).length;
-  const scores=cands.map(c=>scoreCandidate(c,jobById(primaryJobId(c.id))).score);
-  const avg=(scores.reduce((a,b)=>a+b,0)/scores.length).toFixed(1);
+  const upcoming=interviews.filter(i=>i.status==='scheduled'&&new Date(i.when)>new Date()).length;
+  const scores=cands.map(c=>{ const j=jobById(primaryJobId(c.id)); return j?scoreCandidate(c,j).score:0; }).filter(s=>s>0);
+  const avg=scores.length?(scores.reduce((a,b)=>a+b,0)/scores.length).toFixed(1):'—';
   // funnel from real application states
   let fA=0,fS=0,fI=0,fH=0;
   applications.forEach(a=>{
@@ -682,8 +378,8 @@ function vDashboard(){
   });
   const fMax=Math.max(fA,fS,fI,fH,1);
   const funnel=[['Applied',fA,'#8b5cf6'],['Screening',fS,'#0ea5e9'],['Interview',fI,'#f59e0b'],['Hired',fH,'#10b981']];
-  const top=[...cands].map(c=>({c,s:scoreCandidate(c,jobById(primaryJobId(c.id)))})).sort((a,b)=>b.s.score-a.s.score).slice(0,5);
-  const pendingReq=requests.filter(r=>r.status==='requested');
+  const top=[...cands].map(c=>{ const j=jobById(primaryJobId(c.id)); return {c,s:j?scoreCandidate(c,j):{score:0}}; }).sort((a,b)=>b.s.score-a.s.score).slice(0,5);
+  const pendingReq=interviews.filter(r=>r.status==='proposed');
   const attention=[];
   if(pendingReq.length) attention.push([`${pendingReq.length} interview request${pendingReq.length>1?'s':''} waiting`, 'Review on the Interviews page', '#/interviews']);
   const unscreened=JOBS.filter(j=>!jobApplicants(j.id).some(c=>['screening','interview','shortlisted','hired'].includes(appStatus(c.id,j.id))));
@@ -720,9 +416,10 @@ function vDashboard(){
 /* ============================== CANDIDATES ============================== */
 let candFilter='all', candQuery='';
 function vCandidates(){
+  (async()=>{ try{ await loadCandidates(); }catch(err){ toast('Could not load candidates','err'); } renderCandGrid(); })();
   app.innerHTML=topbar('candidates')+`<main class="page">
     <div class="page-head"><div><h1>Candidates</h1><p class="sub" id="candCount"></p></div>
-      <div class="head-actions"><button class="btn" onclick="openAddCandidate()">${ICONS.plus} Add Candidate</button></div></div>
+      <div class="head-actions"></div></div>
     <div class="chips" role="tablist" aria-label="Filter candidates">
       ${[['all','All'],['shortlisted','Shortlisted'],['interview','In interview'],['new','New']].map(([k,l])=>
         `<button class="chip ${candFilter===k?'active':''}" data-f="${k}">${l}</button>`).join('')}
@@ -736,15 +433,15 @@ function vCandidates(){
 }
 function renderCandGrid(){
   const g=$('#candGrid'); if(!g) return;
-  let list=allCandidates();
+  let list=[...CANDIDATES];
   const q=candQuery.trim().toLowerCase();
-  if(q) list=list.filter(c=>(c.name+' '+c.skills+' '+c.headline).toLowerCase().includes(q));
-  if(candFilter==='shortlisted') list=list.filter(c=>Object.keys(shortlisted).some(k=>k.startsWith(c.id+':')));
+  if(q) list=list.filter(c=>(c.name+' '+c.skills+' '+(c.headline||'')).toLowerCase().includes(q));
+  if(candFilter==='shortlisted') list=list.filter(c=>applications.some(a=>a.candId===c.id&&a.status==='shortlisted'));
   if(candFilter==='interview') list=list.filter(c=>primaryStatus(c.id)==='interview');
   if(candFilter==='new') list=list.filter(c=>primaryStatus(c.id)==='applied');
   $('#candCount').textContent=list.length+' candidate'+(list.length===1?'':'s')+' in pipeline';
   g.innerHTML=list.length?list.map(c=>{
-    const pj=primaryJobId(c.id), st=primaryStatus(c.id), sc=scoreCandidate(c,jobById(pj)).score;
+    const pj=primaryJobId(c.id), st=primaryStatus(c.id), job=jobById(pj), sc=job?scoreCandidate(c,job).score:0;
     const stCls={applied:'p-active',interview:'p-interview',screening:'p-screening',shortlisted:'p-shortlisted',hired:'p-hired'}[st]||'p-inactive';
     return `<article class="ccard" tabindex="0" role="button" aria-label="View ${esc(c.name)}" onclick="openCandidate('${c.id}')" onkeydown="if(event.key==='Enter')openCandidate('${c.id}')">
       <button class="kebab" aria-label="More actions" aria-haspopup="menu" onclick="event.stopPropagation();toggleKebab(event,'${c.id}')">&#8942;</button>
@@ -756,8 +453,8 @@ function renderCandGrid(){
         <div class="mrow">${ICONS.mail}<span>${esc(c.email)}</span></div>
         <div class="mrow">${ICONS.phone}<span>${esc(c.phone)}</span></div>
       </div>
-      <div class="kv"><span>Applied for</span><b>${esc(jobById(pj).title)}</b></div>
-      <div class="kv"><span>Applied on</span><b>${esc(c.appliedOn)}</b></div>
+      <div class="kv"><span>Applied for</span><b>${esc(job?job.title:'—')}</b></div>
+      <div class="kv"><span>Applied on</span><b>${esc((getApp(c.id,pj)||{}).appliedOn||'—')}</b></div>
     </article>`;}).join('')
     :`<div class="empty panel">No candidates match. Try clearing the search.</div>`;
 }
@@ -779,7 +476,11 @@ function toggleKebab(e, cid){
 function closeKebab(){ const m=$('#kebab-menu'); if(m) m.remove(); }
 function scheduleFor(cid){
   location.hash='#/interviews';
-  setTimeout(()=>{ const s=$('#ivCand'); if(s){ s.value=cid; s.scrollIntoView({block:'center'}); } },120);
+  setTimeout(()=>{
+    const app=applications.find(a=>a.candId===cid&&a.status==='interview');
+    const s=$('#ivApp');
+    if(s&&app){ s.value=app.application_id; s.scrollIntoView({block:'center'}); }
+  },150);
 }
 function messageCandidate(cid){
   const c=candById(cid);
@@ -789,7 +490,8 @@ function messageCandidate(cid){
 }
 function openCandidate(id){
   const c=candById(id); if(!c) return;
-  const pjid=primaryJobId(id), job=jobById(pjid), s=scoreCandidate(c,job);
+  const pjid=primaryJobId(id), job=jobById(pjid); if(!job) return;
+  const s=scoreCandidate(c,job);
   const ivs=interviews.filter(i=>i.candId===id);
   const apps=candJobs(id).map(jid=>({j:jobById(jid), st:appStatus(id,jid)}));
   openModal(c.name, `<div style="display:flex;gap:14px;align-items:center;margin-bottom:14px">${avatar(c.name,56)}
@@ -800,7 +502,7 @@ function openCandidate(id){
     <div class="kv"><span>Phone</span><b>${esc(c.phone)}</b></div>
     <div class="kv"><span>Experience</span><b>${c.exp} years</b></div>
     <div class="kv"><span>Qualification</span><b>${esc(c.qual)}</b></div>
-    ${(()=>{const r=resumes[id];return r?`<div class="kv"><span>Resume</span><b>${esc(r.name)} <button class="btn ghost sm" style="margin-left:6px" onclick="viewCandidateResume('${id}')">View</button></b></div>`:`<div class="kv"><span>Resume</span><b style="color:var(--faint)">not uploaded</b></div>`;})()}
+    ${c.resumeText?`<div class="kv"><span>Resume</span><b>${esc(c.resumeName||'resume')} <button class="btn ghost sm" style="margin-left:6px" onclick="viewCandidateResume('${id}')">View</button></b></div>`:`<div class="kv"><span>Resume</span><b style="color:var(--faint)">not uploaded</b></div>`}
     <div style="margin:14px 0 6px;font-weight:700;font-size:13.5px">Skills</div>
     <div class="skillchips">${splitSkills(c.skills).map(x=>`<span class="neutral">${esc(x)}</span>`).join('')}</div>
     <div style="margin:16px 0 6px;font-weight:700;font-size:13.5px">AI match — ${esc(job.title)} <span style="color:var(--accent-dark)">${s.score}%</span></div>
@@ -819,44 +521,14 @@ function openCandidate(id){
       <button class="btn sm" onclick="saveShortlist('${c.id}','${pjid}')">Shortlist</button>
     </div>`, true);
 }
-function saveShortlist(cid,jid){ shortlisted[cid+':'+jid]=true; store.set('shortlisted',shortlisted); closeModal(); toast('Candidate shortlisted','ok'); if((location.hash||'').includes('candidates'))renderCandGrid(); }
-function openAddCandidate(){
-  openModal('Add Candidate', `<form id="acForm" novalidate>
-    <div class="form2">
-      <div class="field"><label>Full name</label><input id="acName" placeholder="Priya Sharma"><div class="err">Name required.</div></div>
-      <div class="field"><label>Email</label><input id="acEmail" type="email" placeholder="priya@example.com"><div class="err">Valid email required.</div></div>
-    </div>
-    <div class="form2">
-      <div class="field"><label>Phone</label><input id="acPhone" placeholder="+91 98XXX XXXXX"></div>
-      <div class="field"><label>Location</label><input id="acLoc" placeholder="Bengaluru"></div>
-    </div>
-    <div class="field"><label>Headline</label><input id="acHead" placeholder="Backend Developer"></div>
-    <div class="field"><label>Skills (comma-separated)</label><input id="acSkills" placeholder="python, django, postgresql"><div class="err">Add at least one skill.</div></div>
-    <div class="form2">
-      <div class="field"><label>Experience (years)</label><input id="acExp" type="number" min="0" step="0.5" value="2"></div>
-      <div class="field"><label>Qualification</label><input id="acQual" placeholder="B.Tech Computer Science"></div>
-    </div>
-    <button class="btn block" type="submit">Add to pipeline</button></form>`);
-  $('#acForm').onsubmit=e=>{ e.preventDefault();
-    const name=$('#acName').value.trim(), email=$('#acEmail').value.trim(), skills=$('#acSkills').value.trim();
-    let ok=true;
-    $('#acName').closest('.field').classList.toggle('invalid',!name); ok=ok&&!!name;
-    const emOk=/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email);
-    $('#acEmail').closest('.field').classList.toggle('invalid',!emOk); ok=ok&&emOk;
-    $('#acSkills').closest('.field').classList.toggle('invalid',!skills); ok=ok&&!!skills;
-    if(!ok) return;
-    const c={ id:'x'+Date.now(), name, email, phone:$('#acPhone').value.trim()||'—',
-      location:$('#acLoc').value.trim()||'—', headline:$('#acHead').value.trim()||'Candidate',
-      dept:'Engineering', skills, exp:parseFloat($('#acExp').value)||0,
-      qual:$('#acQual').value.trim(), appliedOn:new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}), active:true };
-    extraCandidates.push(c); store.set('candidates',extraCandidates);
-    applications.push({id:'a'+Date.now(), candId:c.id, jobId:'j1', status:'applied',
-      appliedOn:c.appliedOn, coverNote:''});
-    store.set('applications', applications);
-    closeModal(); toast(name+' added to pipeline','ok'); renderCandGrid();
-  };
+async function saveShortlist(application_id){
+  try{
+    await api('/api/applications/'+application_id+'/status',{method:'PATCH',body:{status:'shortlisted'}});
+    closeModal(); toast('Candidate shortlisted','ok');
+    if((location.hash||'').includes('candidates')){ await loadCandidates(); renderCandGrid(); }
+    if((location.hash||'').includes('screening')) runScreening();
+  }catch(err){ toast(err.message,'err'); }
 }
-
 /* ============================== JOBS ============================== */
 function vJobs(){
   const isApplicant = session.role==='applicant';
@@ -929,7 +601,7 @@ function openApply(jid){
 }
 function renderApplyStep(){
   const {jid,step}=window._apply, j=jobById(jid), me=myCandidate();
-  const res=resumes[me.id];
+  const res=me.resumeText?{name:me.resumeName||'resume'}:null;
   const steps=['Your profile','Resume','Cover note'];
   const body = step===1 ? `
     <p style="font-size:13.5px;color:var(--gray);margin-bottom:12px">The recruiter sees exactly this — keep it accurate.</p>
@@ -944,7 +616,7 @@ function renderApplyStep(){
     <p style="font-size:13.5px;color:var(--gray);margin-bottom:12px">Your resume goes to the recruiter with this application.</p>
     ${res?`<div class="resume-row"><div class="ic">${ICONS.doc}</div>
       <div style="flex:1"><b style="font-size:13.5px">${esc(res.name)}</b>
-      <div style="font-size:12px;color:var(--gray)">${(res.size/1024).toFixed(0)} KB · uploaded ${esc(res.uploadedOn)}</div></div></div>`
+      <div style="font-size:12px;color:var(--gray)">On your profile — the recruiter sees it with this application.</div></div></div>`
     :`<div class="empty">No resume on your profile yet.</div>
       <div class="field"><label for="apFile">Attach resume (PDF, DOCX, TXT — max 5 MB)</label><input id="apFile" type="file" accept=".pdf,.docx,.txt"></div>`}`
   : `
@@ -961,46 +633,49 @@ function renderApplyStep(){
               :`<button class="btn" onclick="submitApplication()">Submit application</button>`}
     </div>`);
 }
+async function uploadResumeFile(file){
+  if(!file) throw new Error('Choose a file first');
+  if(!/\.(pdf|docx|txt)$/i.test(file.name)) throw new Error('Only PDF, DOCX or TXT');
+  if(file.size>5*1024*1024) throw new Error('Resume must be under 5 MB');
+  const fd=new FormData(); fd.append('file', file);
+  const res=await fetch(API_BASE+'/api/applicants/me/resume',{
+    method:'POST', headers: apiToken?{Authorization:'Bearer '+apiToken}:{}, body:fd });
+  if(!res.ok){ const t=await res.text(); throw new Error(t||'Upload failed'); }
+  const out=await res.json();
+  await loadMyProfile();
+  if(CANDIDATES.length && ME) CANDIDATES[0]=ME;
+  return out;
+}
 function applyNext(){
   const {step}=window._apply, me=myCandidate();
-  if(step===2 && !resumes[me.id]){
+  if(step===2 && !me.resumeText){
     const f=$('#apFile')&&$('#apFile').files[0];
     if(!f){ toast('Attach your resume to continue','err'); return; }
-    if(!/\.(pdf|docx|txt)$/i.test(f.name)){ toast('Only PDF, DOCX or TXT','err'); return; }
-    if(f.size>5*1024*1024){ toast('Resume must be under 5 MB','err'); return; }
-    const rd=new FileReader();
-    rd.onload=()=>{ const rec={name:f.name,size:f.size,type:f.type,
-      uploadedOn:new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}),dataUrl:rd.result};
-      if(/\.txt$/i.test(f.name)){
-        try{
-          const bin=atob(rd.result.split(',')[1]||'');
-          let tx; try{ tx=decodeURIComponent(escape(bin)); }catch{ tx=bin; }
-          rec.text=tx; rec.parsedSkills=parseResumeText(tx).skills;
-        }catch{}
-      }
-      try{ const all={...resumes,[me.id]:rec}; store.set('resumes_v3',all); resumes=all; }
-      catch{ resumes={...resumes,[me.id]:{...rec,dataUrl:null}}; try{store.set('resumes_v3',resumes);}catch{} }
+    toast('Uploading resume…');
+    uploadResumeFile(f).then(out=>{
+      const n=(out.extracted_skills||[]).length;
+      toast(n?`Resume parsed — ${n} skills extracted`:'Resume uploaded','ok');
       window._apply.step++; renderApplyStep();
-    };
-    rd.onerror=()=>toast('Could not read file','err');
-    rd.readAsDataURL(f);
+    }).catch(err=>toast(err.message,'err'));
     return;
   }
   window._apply.step++; renderApplyStep();
 }
-function submitApplication(){
-  const {jid}=window._apply, me=myCandidate();
-  const note=($('#apNote')||{}).value||'';
-  applications.push({id:'a'+Date.now(), candId:me.id, jobId:jid, status:'applied',
-    appliedOn:new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}),
-    coverNote:note.trim()});
-  store.set('applications', applications);
-  closeModal(); toast('Application sent to the recruiter','ok'); vJobs();
+async function submitApplication(){
+  const {jid}=window._apply, me=myCandidate(), j=jobById(jid);
+  try{
+    await api('/api/applications',{method:'POST',body:{job_id:j.job_id}});
+    await loadMyApplications();
+    closeModal(); toast('Application sent to the recruiter','ok'); vJobs();
+  }catch(err){ toast(err.message,'err'); }
 }
 function openRequestInterview(jid){
   const j=jobById(jid), me=myCandidate(); if(!me) return;
-  const existing=requests.find(r=>r.candId===me.id&&r.jobId===jid&&r.status==='requested');
-  if(existing){ toast('You already have a pending request for this role','err'); return; }
+  const myApp=getApp(me.id,jid);
+  if(!myApp){ toast('Apply for this role first','err'); return; }
+  if(appStatus(me.id,jid)!=='interview'){ toast('The recruiter approves applications for interview first','err'); return; }
+  const existing=interviews.find(i=>i.application_id===myApp.application_id&&['proposed','scheduled'].includes(i.status));
+  if(existing){ toast('You already have a pending or scheduled interview for this role','err'); return; }
   openModal('Request interview', `<p style="font-size:13.5px;color:var(--gray);margin-bottom:14px">
     Propose a slot for <b style="color:var(--ink)">${esc(j.title)}</b> — your AI match is
     <b style="color:var(--accent-dark)">${scoreCandidate(me,j).score}%</b>. The recruiter accepts or declines.</p>
@@ -1012,16 +687,19 @@ function openRequestInterview(jid){
       <div class="field"><label for="rqMsg">Message to the recruiter</label>
       <textarea id="rqMsg" rows="3" placeholder="A line or two about why you're a fit…"></textarea></div>
       <button class="btn block" type="submit">Send request</button></form>`);
-  $('#rqForm').onsubmit=e=>{ e.preventDefault();
+  $('#rqForm').onsubmit=async e=>{ e.preventDefault();
     const when=$('#rqWhen').value;
     const ok=when && new Date(when)>new Date();
     $('#rqWhen').closest('.field').classList.toggle('invalid',!ok);
     if(!ok) return;
-    requests.unshift({ id:'r'+Date.now(), candId:me.id, jobId:jid, status:'requested',
-      createdOn:new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}),
-      when, mode:$('#rqMode').value, message:$('#rqMsg').value.trim() });
-    store.set('requests', requests); closeModal();
-    toast('Interview requested for '+fmtWhen(when),'ok'); vInterviews();
+    const btn=e.target.querySelector('button[type=submit]'); btn.disabled=true;
+    try{
+      await api('/api/interviews/propose',{method:'POST',body:{
+        application_id:myApp.application_id, scheduled_on:new Date(when).toISOString(),
+        mode:$('#rqMode').value, message:$('#rqMsg').value.trim()||null }});
+      await loadMyInterviews();
+      closeModal(); toast('Interview requested for '+fmtWhen(when),'ok'); vInterviews();
+    }catch(err){ toast(err.message,'err'); btn.disabled=false; }
   };
 }
 function goScreen(jid){ location.hash='#/screening'; setTimeout(()=>{ const s=$('#scrJob'); if(s){ s.value=jid; runScreening(); } },60); }
@@ -1038,31 +716,46 @@ function vScreening(){
   </main>`+footer();
 }
 function runScreening(){
-  const job=jobById($('#scrJob').value);
-  const ranked=allCandidates().map(c=>({c, r:scoreCandidate(c,job)})).sort((a,b)=>b.r.score-a.r.score);
-  window._lastRank={job,ranked};
+  const job=jobById($('#scrJob').value); if(!job) return;
   const box=$('#rankList');
-  box.innerHTML='<div style="display:flex;justify-content:flex-end;margin-bottom:10px"><button class="btn ghost sm" onclick="exportShortlist()">Export shortlist (CSV)</button></div>'
-  +'<div class="grid" style="gap:12px" aria-live="polite">'+ranked.map(({c,r},i)=>`
-    <div class="rank"><div class="pos ${i===0?'top':''}">${i+1}</div>
-      <div class="who"><div class="nm">${esc(c.name)}</div><div class="rl">${esc(c.headline)} · ${c.exp} yrs · ${esc(c.location)}</div>
-        <div class="skillchips">${r.verified.map(s=>`<span class="hit">+ ${esc(s)}</span>`).join('')}${r.claimed.map(s=>`<span class="warn">~ ${esc(s)}</span>`).join('')}${r.missing.map(s=>`<span class="miss">− ${esc(s)}</span>`).join('')}</div>
-        <div style="font-size:11.5px;color:var(--faint);margin-bottom:6px">+ evidenced in resume · ~ claimed on profile only · − missing</div>
-        <div class="breakdown" style="max-width:420px">
-          ${[['Skills',r.parts.skill],['Experience',r.parts.exp],['Education',r.parts.edu]].map(([l,v])=>
-          `<div class="bd-row"><span>${l}</span><span class="bar"><i style="width:${v*100}%"></i></span><b>${Math.round(v*100)}%</b></div>`).join('')}
-        </div></div>
-      <div class="bigscore"><div class="v">${r.score}%</div><div class="l">match</div>
-        <div class="mt"><button class="btn ghost sm" onclick="saveShortlist('${c.id}','${job.id}')">Shortlist</button></div></div>
-    </div>`).join('')+'</div>';
-  toast('Screened '+ranked.length+' candidates for '+job.title,'ok');
+  box.innerHTML='<div class="empty panel">Scoring candidates against '+esc(job.title)+'…</div>';
+  (async()=>{
+    try{
+      const res=await api('/api/screening/job/'+job.job_id+'/run',{method:'POST'});
+      const ranking=res.ranking||[];
+      window._lastRank={job,ranking};
+      const byEmail={}; CANDIDATES.forEach(c=>byEmail[c.email]=c);
+      const chipCls={evidenced:'hit',claimed:'warn',missing:'miss'};
+      const chipMark={evidenced:'+ ',claimed:'~ ',missing:'− '};
+      box.innerHTML='<div style="display:flex;justify-content:flex-end;margin-bottom:10px"><button class="btn ghost sm" onclick="exportShortlist()">Export shortlist (CSV)</button></div>'
+      +'<div class="grid" style="gap:12px" aria-live="polite">'+ranking.map((r,i)=>{
+        const c=byEmail[r.email]||{name:r.candidate_name,email:r.email,skills:r.candidate_skills||'',exp:r.candidate_experience||0,qual:'',location:'',headline:''};
+        const parts=scoreCandidate(c,job).parts;
+        const ev=r.skill_evidence||[];
+        return `
+        <div class="rank"><div class="pos ${i===0?'top':''}">${i+1}</div>
+          <div class="who"><div class="nm">${esc(r.candidate_name)}</div><div class="rl">${esc(c.headline||'')} · ${c.exp} yrs · ${esc(c.location||'')}</div>
+            <div class="skillchips">${ev.map(e=>`<span class="${chipCls[e.status]}">${chipMark[e.status]}${esc(e.skill)}</span>`).join('')}</div>
+            <div style="font-size:11.5px;color:var(--faint);margin-bottom:6px">+ evidenced in resume · ~ claimed on profile only · − missing</div>
+            <div class="breakdown" style="max-width:420px">
+              ${[['Skills',parts.skill],['Experience',parts.exp],['Education',parts.edu]].map(([l,v])=>
+              `<div class="bd-row"><span>${l}</span><span class="bar"><i style="width:${v*100}%"></i></span><b>${Math.round(v*100)}%</b></div>`).join('')}
+            </div></div>
+          <div class="bigscore"><div class="v">${r.score}%</div><div class="l">match</div>
+            <div class="mt"><button class="btn ghost sm" onclick="saveShortlist(${r.application_id})">Shortlist</button></div></div>
+        </div>`;}).join('')+'</div>';
+      toast('Screened '+ranking.length+' candidates for '+job.title,'ok');
+    }catch(err){ box.innerHTML='<div class="empty panel">Screening failed: '+esc(err.message)+'</div>'; }
+  })();
 }
 function exportShortlist(){
   const lr=window._lastRank; if(!lr){ toast('Run screening first','err'); return; }
-  const rows=[['Rank','Name','Email','Headline','Experience (yrs)','Qualification','Score %','Skill %','Exp %','Edu %','Matched skills','Missing skills']];
-  lr.ranked.forEach(({c,r},i)=>rows.push([i+1,c.name,c.email,c.headline,c.exp,c.qual,r.score,
-    Math.round(r.parts.skill*100),Math.round(r.parts.exp*100),Math.round(r.parts.edu*100),
-    r.matched.join('; '),r.missing.join('; ')]));
+  const rows=[['Rank','Name','Email','Experience (yrs)','Score %','Evidenced skills','Claimed skills','Missing skills']];
+  lr.ranking.forEach((r,i)=>{
+    const ev=r.skill_evidence||[];
+    const pick=s=>ev.filter(e=>e.status===s).map(e=>e.skill).join('; ');
+    rows.push([i+1,r.candidate_name,r.email,r.candidate_experience,r.score,pick('evidenced'),pick('claimed'),pick('missing')]);
+  });
   const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
@@ -1072,8 +765,9 @@ function exportShortlist(){
 }
 
 /* ============================== APPLICATIONS (recruiter inbox) ============================== */
-let _appJob=JOBS[0].id, _appSort='score';
+let _appJob=null, _appSort='score';
 function vApplications(){
+  if(!_appJob && JOBS.length) _appJob=JOBS[0].id;
   app.innerHTML=topbar('applications')+`<main class="page">
     <div class="page-head"><div><h1>Applications</h1><p class="sub">Pick a published role — review, AI-rank, approve for interview.</p></div>
     <div class="head-actions"><button class="btn" onclick="goScreen(_appJob)">${ICONS.chart} AI Screening</button></div></div>
@@ -1097,46 +791,59 @@ function selectAppJob(jid){ _appJob=jid; const s=$('#appJob'); if(s) s.value=jid
 function renderAppList(){
   const box=$('#appList'); if(!box) return;
   const j=jobById(_appJob);
-  let rows=applications.filter(a=>a.jobId===_appJob)
-    .map(a=>({a, c:candById(a.candId), r:scoreCandidate(candById(a.candId)||{skills:'',exp:0,qual:''}, j)}))
-    .filter(x=>x.c);
-  rows.sort((x,y)=>_appSort==='score' ? y.r.score-x.r.score : (y.a.appliedOn>x.a.appliedOn?1:-1));
-  $('#appCount').textContent=`${rows.length} application${rows.length===1?'':'s'} — ${j.title}`;
-  if(!rows.length){ box.innerHTML=emptyState("No applications yet","Applications for this role will appear here.",ICONS.users); return; }
-  box.innerHTML=rows.map(({a,c,r})=>{
-    const st=appStatus(c.id,_appJob);
-    const res=resumes[c.id];
-    return `<div class="app-row">
-      <input type="checkbox" class="app-check" data-cid="${c.id}" aria-label="Select ${esc(c.name)}"${['interview','hired','rejected'].includes(st)?' disabled':''}>
-      <div class="ava">${avatar(c.name,40)}</div>
-      <div class="who"><b>${esc(c.name)}</b>
-        <div class="meta">${esc(c.email)} · applied ${esc(a.appliedOn)}${a.coverNote?' · has cover note':''}${res?' · '+esc(res.name):''}</div>
-        <div class="meta">${r.matched.slice(0,3).map(esc).join(', ')||'—'}</div></div>
-      <div class="app-score"><div class="score-line"><span class="bar"><i style="width:${r.score}%"></i></span><b>${r.score}%</b></div></div>
-      <div>${pill(st)}</div>
-      <div class="app-actions">
-        <button class="btn ghost sm" onclick="openCandidate('${c.id}')">Profile</button>
-        ${['interview','hired','rejected'].includes(st)?'':`<button class="btn sm" onclick="approveForInterview('${c.id}','${_appJob}')">Approve</button>
-        <button class="btn ghost sm" onclick="rejectApp('${c.id}','${_appJob}')">Reject</button>`}
-      </div></div>`;
-  }).join('');
+  box.innerHTML='<div class="empty">Loading applications…</div>';
+  (async()=>{
+    try{
+      await loadJobApplications(j.job_id);
+      let rows=applications
+        .map(a=>({a, c:candById(a.candId), r:scoreCandidate(candById(a.candId)||{skills:'',exp:0,qual:''}, j)}))
+        .filter(x=>x.c);
+      rows.sort((x,y)=>_appSort==='score' ? y.r.score-x.r.score : (y.a.appliedOn>x.a.appliedOn?1:-1));
+      $('#appCount').textContent=`${rows.length} application${rows.length===1?'':'s'} — ${j.title}`;
+      if(!rows.length){ box.innerHTML=emptyState("No applications yet","Applications for this role will appear here.",ICONS.users); return; }
+      box.innerHTML=rows.map(({a,c,r})=>{
+        const st=a.status;
+        return `<div class="app-row">
+          <input type="checkbox" class="app-check" data-aid="${a.application_id}" aria-label="Select ${esc(c.name)}"${['interview','hired','rejected'].includes(st)?' disabled':''}>
+          <div class="ava">${avatar(c.name,40)}</div>
+          <div class="who"><b>${esc(c.name)}</b>
+            <div class="meta">${esc(c.email)} · applied ${esc(a.appliedOn)}${c.resumeName?' · '+esc(c.resumeName):''}</div>
+            <div class="meta">${r.matched.slice(0,3).map(esc).join(', ')||'—'}</div></div>
+          <div class="app-score"><div class="score-line"><span class="bar"><i style="width:${r.score}%"></i></span><b>${r.score}%</b></div></div>
+          <div>${pill(st)}</div>
+          <div class="app-actions">
+            <button class="btn ghost sm" onclick="openCandidate('${c.id}')">Profile</button>
+            ${['interview','hired','rejected'].includes(st)?'':`<button class="btn sm" onclick="approveForInterview(${a.application_id})">Approve</button>
+            <button class="btn ghost sm" onclick="rejectApp(${a.application_id})">Reject</button>`}
+          </div></div>`;
+      }).join('');
+    }catch(err){ box.innerHTML='<div class="empty">Could not load applications: '+esc(err.message)+'</div>'; }
+  })();
 }
-function approveForInterview(cid,jid){
-  setAppStatus(cid,jid,'interview');
-  const c=candById(cid);
-  toast((c?c.name:'Candidate')+' approved for interview — they can request a slot from My Interviews','ok');
-  renderAppList();
+async function setApplicationStatus(application_id, status){
+  await api('/api/applications/'+application_id+'/status',{method:'PATCH',body:{status}});
 }
-function rejectApp(cid,jid){
-  setAppStatus(cid,jid,'rejected');
-  toast('Application rejected','err'); renderAppList();
+async function approveForInterview(application_id){
+  try{
+    await setApplicationStatus(application_id,'interview');
+    toast('Approved for interview — the candidate can request a slot from My Interviews','ok');
+    renderAppList();
+  }catch(err){ toast(err.message,'err'); }
 }
-function approveSelected(){
-  const ids=[...document.querySelectorAll('.app-check:checked')].map(x=>x.dataset.cid);
+async function rejectApp(application_id){
+  try{
+    await setApplicationStatus(application_id,'rejected');
+    toast('Application rejected','err'); renderAppList();
+  }catch(err){ toast(err.message,'err'); }
+}
+async function approveSelected(){
+  const ids=[...document.querySelectorAll('.app-check:checked')].map(x=>x.dataset.aid);
   if(!ids.length){ toast('Select at least one application','err'); return; }
-  ids.forEach(cid=>setAppStatus(cid,_appJob,'interview'));
-  toast(ids.length+' candidate'+(ids.length>1?'s':'')+' approved for interview','ok');
-  renderAppList();
+  try{
+    await Promise.all(ids.map(id=>setApplicationStatus(id,'interview')));
+    toast(ids.length+' candidate'+(ids.length>1?'s':'')+' approved for interview','ok');
+    renderAppList();
+  }catch(err){ toast(err.message,'err'); }
 }
 
 /* ============================== INTERVIEWS ============================== */
@@ -1144,12 +851,14 @@ function fmtWhen(iso){ const d=new Date(iso); return d.toLocaleString('en-GB',{d
 function vInterviews(){
   const isApplicant = session.role==='applicant';
   const me = myCandidate();
-  const pending = requests.filter(r=>r.status==='requested');
-  const decided = requests.filter(r=>r.status!=='requested');
-  const myIvs = isApplicant ? (me ? interviews.filter(i=>i.candId===me.id) : []) : interviews;
-  const myReqs = isApplicant ? (me ? requests.filter(r=>r.candId===me.id) : []) : [];
-  const approved = isApplicant && me ? applications.filter(a=>a.candId===me.id && appStatus(me.id,a.jobId)==='interview'
-    && !requests.some(r=>r.candId===me.id && r.jobId===a.jobId && ['requested','scheduled'].includes(r.status))) : [];
+  const proposed = interviews.filter(i=>i.status==='proposed');
+  const decided = interviews.filter(i=>['declined'].includes(i.status));
+  const myIvs = isApplicant ? interviews.filter(i=>['scheduled','completed'].includes(i.status)) : interviews.filter(i=>['scheduled','completed'].includes(i.status));
+  const myReqs = isApplicant ? interviews.filter(i=>['proposed','declined'].includes(i.status)) : [];
+  const approved = isApplicant && me ? applications.filter(a=>a.status==='interview'
+    && !interviews.some(i=>i.application_id===a.application_id && ['proposed','scheduled'].includes(i.status))) : [];
+  // recruiter schedule form: approved applications (status interview)
+  const schedApps = !isApplicant ? applications.filter(a=>a.status==='interview') : [];
   app.innerHTML=topbar('interviews')+`<main class="page">
     <div class="page-head"><div><h1>${isApplicant?'My Interviews':'Interviews'}</h1>
     <p class="sub">${isApplicant?'Request slots for approved roles, track requests, see scheduled conversations.':'Requests from applicants, scheduling, and outcomes.'}</p></div></div>
@@ -1158,32 +867,30 @@ function vInterviews(){
       ${approved.length?approved.map(a=>{const j=jobById(a.jobId);return `
         <div class="req-card"><div class="req-ava">${avatar(j?j.company:'?',44)}</div>
           <div class="req-body"><div><b>${esc(j?j.title:'')}</b></div>
-          <div class="req-meta">${esc(j?j.company:'')} · your AI match ${scoreCandidate(me,j).score}%</div></div>
+          <div class="req-meta">${esc(j?j.company:'')} · your AI match ${j?scoreCandidate(me,j).score:0}%</div></div>
           <div class="req-actions"><button class="btn sm" onclick="openRequestInterview('${a.jobId}')">Request interview</button></div>
         </div>`;}).join('')
       :'${emptyState("Nothing waiting","Approved applications will appear here.",ICONS.check)}'}
     </div>`:''}
     ${!isApplicant?`
-    <div class="panel mb"><h3>Interview requests ${pending.length?`<span class="count-pill">${pending.length} pending</span>`:''}</h3>
+    <div class="panel mb"><h3>Interview requests ${proposed.length?`<span class="count-pill">${proposed.length} pending</span>`:''}</h3>
       <p class="sub">The applicant proposes a slot — you accept or decline.</p><div id="reqList">
-      ${pending.length?pending.map(r=>{const c=candById(r.candId),j=jobById(r.jobId);const sc=c?scoreCandidate(c,j).score:'—';return `
-        <div class="req-card"><div class="req-ava">${avatar(c?c.name:'?',44)}</div>
-          <div class="req-body"><div><b>${esc(c?c.name:'—')}</b> <span style="color:var(--gray);font-size:12.5px">requests</span> <b>${esc(j?j.title:'')}</b>
+      ${proposed.length?proposed.map(r=>{const c=candById(r.candId),j=jobById(r.jobId);const sc=(c&&j)?scoreCandidate(c,j).score:'—';return `
+        <div class="req-card"><div class="req-ava">${avatar(r.candName||'?',44)}</div>
+          <div class="req-body"><div><b>${esc(r.candName||'—')}</b> <span style="color:var(--gray);font-size:12.5px">requests</span> <b>${esc(r.jobTitle||'')}</b>
           ${c?`<span class="count-pill" style="margin-left:6px">${sc}% match</span>`:''}</div>
           <div class="req-slot">${ICONS.cal}<b>${esc(r.when?fmtWhen(r.when):'—')}</b><span> · ${esc(r.mode||'')}</span></div>
-          <div class="req-msg">“${esc(r.message||'No message.') }”</div>
-          <div class="req-meta">${esc(r.createdOn)} · ${esc(c?c.email:'')}</div></div>
-          <div class="req-actions"><button class="btn sm" onclick="decideRequest('${r.id}','accepted')">Accept</button>
-          <button class="btn ghost sm" onclick="decideRequest('${r.id}','declined')">Decline</button></div>
+          <div class="req-msg">"${esc(r.message||'No message.')}"</div>
+          <div class="req-meta">${esc(r.candName||'')}</div></div>
+          <div class="req-actions"><button class="btn sm" onclick="decideRequest(${r.interview_id},'accept')">Accept</button>
+          <button class="btn ghost sm" onclick="decideRequest(${r.interview_id},'decline')">Decline</button></div>
         </div>`;}).join('')
       :'<div class="empty">No pending requests. New applicant requests appear here.</div>'}
-      ${decided.length?`<div style="margin-top:10px;font-size:12.5px;color:var(--gray)">Recently decided: `+decided.slice(0,4).map(r=>{const c=candById(r.candId);return `${esc(c?c.name.split(' ')[0]:'?')} ${pill(r.status)}`;}).join(' · ')+'</div>':''}
       </div></div>`:''}
     <div class="grid g2">
-      ${!isApplicant?`<div class="panel"><h3>Schedule interview</h3><p class="sub">Pick a candidate and a slot.</p>
+      ${!isApplicant?`<div class="panel"><h3>Schedule interview</h3><p class="sub">Pick an approved application and a slot.</p>
         <form id="ivForm" novalidate>
-          <div class="field"><label>Candidate</label><select id="ivCand">${allCandidates().map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select></div>
-          <div class="field"><label>Job</label><select id="ivJob">${JOBS.map(j=>`<option value="${j.id}">${esc(j.title)}</option>`).join('')}</select></div>
+          <div class="field"><label>Approved application</label><select id="ivApp">${schedApps.map(a=>{const c=candById(a.candId),j=jobById(a.jobId);return `<option value="${a.application_id}">${esc(c?c.name:'?')} — ${esc(j?j.title:'?')}</option>`;}).join('')}</select></div>
           <div class="form2">
             <div class="field"><label>Date &amp; time</label><input id="ivWhen" type="datetime-local"><div class="err">Pick a future date.</div></div>
             <div class="field"><label>Mode</label><select id="ivMode"><option>online</option><option>in-person</option><option>phone</option></select></div>
@@ -1192,69 +899,72 @@ function vInterviews(){
           <button class="btn block" type="submit">Schedule</button>
         </form></div>`:''}
       <div class="panel"><h3>${isApplicant?'My requests':'Scheduled'}</h3>
-        <p class="sub">${isApplicant?'Track what you asked for.':interviews.length+' upcoming & past.'}</p>
+        <p class="sub">${isApplicant?'Track what you asked for.':myIvs.length+' upcoming & past.'}</p>
         ${isApplicant&&myReqs.length?myReqs.map(r=>{const j=jobById(r.jobId);return `
-          <div class="feed-item"><div><b>Interview request — ${esc(j?j.title:'')}</b>
+          <div class="feed-item"><div><b>Interview request — ${esc(j?j.title:r.jobTitle)}</b>
           <div style="font-size:12.5px;color:var(--gray)">${r.when?esc(fmtWhen(r.when))+' · ':''}${esc(r.mode||'')}</div>
-          ${r.message?`<div style="font-size:12.5px;color:var(--gray)">“${esc(r.message)}”</div>`:''}</div>
-          <span class="t">${esc(r.createdOn)}<br>${pill(r.status)}</span></div>`;}).join(''):''}
+          ${r.message?`<div style="font-size:12.5px;color:var(--gray)">"${esc(r.message)}"</div>`:''}</div>
+          <span class="t">${pill(r.status)}</span></div>`;}).join(''):''}
         <div id="ivList"></div></div>
     </div></main>`+footer();
   const render=()=>{
-    $('#ivList').innerHTML=myIvs.length?myIvs.map(i=>{const c=candById(i.candId),j=jobById(i.jobId);return `
-      <div class="feed-item">${avatar(c?c.name:'?',36)}<div><b>${esc(c?c.name:'—')}</b>
-      <div style="font-size:12.5px;color:var(--gray)">${esc(j?j.title:'')} · ${esc(i.mode)} · ${esc(i.by||'')}</div>
-      ${i.feedback?`<div style="font-size:12.5px;margin-top:4px">“${esc(i.feedback)}”</div>`:''}</div>
+    $('#ivList').innerHTML=myIvs.length?myIvs.map(i=>{const j=jobById(i.jobId);return `
+      <div class="feed-item">${avatar(i.candName||'?',36)}<div><b>${esc(i.candName||'—')}</b>
+      <div style="font-size:12.5px;color:var(--gray)">${esc(j?j.title:i.jobTitle)} · ${esc(i.mode)} · ${esc(i.by||'')}</div>
+      ${i.feedback?`<div style="font-size:12.5px;margin-top:4px">"${esc(i.feedback)}"</div>`:''}</div>
       <span class="t">${esc(fmtWhen(i.when))}<br>${pill(i.result||'pending')}</span></div>`;}).join('')
       :emptyState("No interviews scheduled","Scheduled interviews will appear here.",ICONS.cal);
   };
   render();
   const f=$('#ivForm');
-  if(f) f.onsubmit=e=>{ e.preventDefault();
+  if(f) f.onsubmit=async e=>{ e.preventDefault();
     const when=$('#ivWhen').value;
     const ok=when && new Date(when)>new Date();
     $('#ivWhen').closest('.field').classList.toggle('invalid',!ok);
     if(!ok) return;
-    addInterview({candId:$('#ivCand').value,jobId:$('#ivJob').value,when,mode:$('#ivMode').value,by:$('#ivBy').value.trim()});
-    render(); toast('Interview scheduled','ok'); e.target.reset();
+    const btn=e.target.querySelector('button[type=submit]'); btn.disabled=true;
+    try{
+      await api('/api/interviews',{method:'POST',body:{
+        application_id:parseInt($('#ivApp').value,10),
+        scheduled_on:new Date(when).toISOString(),
+        mode:$('#ivMode').value, interviewer:$('#ivBy').value.trim()||null }});
+      await loadRecruiterInterviews();
+      render(); toast('Interview scheduled','ok'); e.target.reset();
+    }catch(err){ toast(err.message,'err'); }
+    btn.disabled=false;
   };
 }
-function addInterview({candId,jobId,when,mode,by,feedback='',result='pending'}){
-  interviews.unshift({id:'i'+Date.now(),candId,jobId,when,mode,by,feedback,result});
-  store.set('interviews',interviews);
-}
-function decideRequest(rid,verdict){
-  const r=requests.find(x=>x.id===rid); if(!r) return;
-  const c=candById(r.candId);
-  if(verdict==='accepted'){
-    if(!r.when){ toast('This request has no proposed slot','err'); return; }
-    addInterview({candId:r.candId, jobId:r.jobId, when:r.when, mode:r.mode||'online',
-      by:session?session.name:'', feedback:'', result:'pending'});
-    r.status='scheduled';
-    toast('Interview scheduled for '+(c?c.name:'candidate'),'ok');
-  } else {
-    r.status='declined';
-    toast('Request declined','err');
-  }
-  store.set('requests',requests);
-  vInterviews();
+async function addInterview(){ /* replaced by direct API call in the form */ }
+async function decideRequest(interview_id, verdict){
+  try{
+    await api('/api/interviews/'+interview_id+'/respond',{method:'PATCH',body:{action:verdict}});
+    await loadRecruiterInterviews();
+    toast(verdict==='accept'?'Slot accepted — interview scheduled':'Proposal declined', verdict==='accept'?'ok':'err');
+    vInterviews();
+  }catch(err){ toast(err.message,'err'); }
 }
 
 /* ============================== ADMIN ============================== */
 function vAdmin(){
   app.innerHTML=topbar('admin')+`<main class="page">
     <div class="page-head"><div><h1>Admin</h1><p class="sub">Workspace users and roles.</p></div></div>
-    <div class="panel"><table class="tbl"><thead><tr><th>User</th><th>Email</th><th>Role</th><th>Status</th></tr></thead><tbody>
-      ${DEMO_USERS.map(u=>`<tr><td><div style="display:flex;gap:10px;align-items:center">${avatar(u.name,32)}<b>${esc(u.name)}</b></div></td><td>${esc(u.email)}</td><td style="text-transform:capitalize">${esc(u.role)}</td><td><span class="pill p-active">active</span></td></tr>`).join('')}
-    </tbody></table></div></main>`+footer();
+    <div class="panel"><div class="empty">Loading users…</div></div></main>`+footer();
+  (async()=>{
+    try{
+      const users=await api('/api/admin/users');
+      app.querySelector('.panel').innerHTML=`<table class="tbl"><thead><tr><th>User</th><th>Email</th><th>Role</th><th>Status</th></tr></thead><tbody>
+        ${users.map(u=>`<tr><td><div style="display:flex;gap:10px;align-items:center">${avatar(u.name,32)}<b>${esc(u.name)}</b></div></td><td>${esc(u.email)}</td><td style="text-transform:capitalize">${esc(u.role)}</td><td><span class="pill p-active">active</span></td></tr>`).join('')}
+      </tbody></table>`;
+    }catch(err){ app.querySelector('.panel').innerHTML='<div class="empty">Could not load users: '+esc(err.message)+'</div>'; }
+  })();
 }
 
 /* ============================== PROFILE ============================== */
 function vProfile(){
   const me=myCandidate();
   if(!me){ location.hash='#/jobs'; return; }
-  const res=resumes[me.id];
-  const myJobs=candJobs(me.id).map(jid=>({j:jobById(jid), s:scoreCandidate(me,jobById(jid))}));
+  const res=me.resumeText?{name:me.resumeName||'resume'}:null;
+  const myJobs=candJobs(me.id).map(jid=>({j:jobById(jid), s:jobById(jid)?scoreCandidate(me,jobById(jid)):{score:0}})).filter(x=>x.j);
   app.innerHTML=topbar('profile')+`<main class="page">
     <div class="page-head"><div><h1>My Profile</h1><p class="sub">Keep it fresh — recruiters and the AI read this.</p></div>
     <div class="head-actions">${avatar(me.name,40)}</div></div>
@@ -1278,7 +988,7 @@ function vProfile(){
         <div class="panel"><h3>Resume</h3><p class="sub">PDF, DOCX or TXT, up to 5 MB — like the full product.</p>
           ${res?`<div class="resume-row"><div class="ic">${ICONS.doc}</div>
             <div style="flex:1;min-width:0"><b style="font-size:13.5px">${esc(res.name)}</b>
-            <div style="font-size:12px;color:var(--gray)">${(res.size/1024).toFixed(0)} KB · uploaded ${esc(res.uploadedOn)}</div></div>
+            <div style="font-size:12px;color:var(--gray)">Parsed by the AI — skills feed your match scores.</div></div>
             <button class="btn ghost sm" onclick="viewResume()">View</button></div>
             <div class="mt"></div>`:'<div class="empty">No resume yet — upload one below.</div>'}
           <div class="field"><label for="rsFile">Choose file</label><input id="rsFile" type="file" accept=".pdf,.docx,.txt"></div>
@@ -1292,67 +1002,33 @@ function vProfile(){
         </div>
       </div>
     </div></main>`+footer();
-  $('#pfForm').onsubmit=e=>{ e.preventDefault();
-    profileOverrides[me.id]={ name:$('#pfName').value.trim()||me.name, phone:$('#pfPhone').value.trim(),
-      location:$('#pfLoc').value.trim(), headline:$('#pfHead').value.trim()||'Candidate',
-      skills:$('#pfSkills').value.trim(), exp:parseFloat($('#pfExp').value)||0,
-      qual:$('#pfQual').value.trim() };
-    store.set('profile_overrides',profileOverrides);
-    toast('Profile saved — match scores updated','ok'); vProfile();
+  $('#pfForm').onsubmit=async e=>{ e.preventDefault();
+    const btn=e.target.querySelector('button[type=submit]'); btn.disabled=true;
+    try{
+      await api('/api/applicants/me',{method:'PUT',body:{
+        phone:$('#pfPhone').value.trim()||null, location:$('#pfLoc').value.trim()||null,
+        skills:$('#pfSkills').value.trim()||null,
+        experience_years:parseFloat($('#pfExp').value)||0,
+        qualification:$('#pfQual').value.trim()||null }});
+      await loadMyProfile(); CANDIDATES=[ME];
+      toast('Profile saved — match scores updated','ok'); vProfile();
+    }catch(err){ toast(err.message,'err'); btn.disabled=false; }
   };
 }
 function uploadResume(){
   const me=myCandidate(); if(!me) return;
   const inp=$('#rsFile'), f=inp.files[0];
   if(!f){ toast('Choose a resume file first','err'); return; }
-  const okExt=/\.(pdf|docx|txt)$/i.test(f.name);
-  if(!okExt){ toast('Only PDF, DOCX or TXT resumes','err'); return; }
-  if(f.size>5*1024*1024){ toast('Resume must be under 5 MB','err'); return; }
-  const done=(dataUrl)=>{
-    const rec={name:f.name,size:f.size,type:f.type,uploadedOn:new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}),dataUrl};
-    if(/\.txt$/i.test(f.name)&&dataUrl){
-      const text=atob(dataUrl.split(',')[1]||'');
-      let parsed;
-      try{ parsed=parseResumeText(decodeURIComponent(escape(text))); }
-      catch{ parsed=parseResumeText(text); }
-      rec.text=text; rec.parsedSkills=parsed.skills;
-      $('#parseOut').innerHTML=`<div style="font-weight:700;font-size:13px;margin-bottom:8px">AI extracted</div>
-        <div class="skillchips">${parsed.skills.map(s=>`<span class="hit">${esc(s)}</span>`).join('')||'<span class="neutral">no known skills found</span>'}</div>
-        <div class="kv mt"><span>Experience</span><b>${parsed.exp} yrs</b></div>
-        <div class="kv"><span>Qualification</span><b>${esc(parsed.quals.join(', ')||'—')}</b></div>
-        <button class="btn block mt" onclick='applyParsed(${JSON.stringify(parsed.skills)},${parsed.exp},"${parsed.quals.join(', ')}")'>Apply to my profile</button>`;
-      toast('Resume parsed','ok');
-    } else {
-      toast('Resume uploaded — full parsing runs on the connected backend','ok');
-    }
-    try{ const all={...resumes,[me.id]:rec}; store.set('resumes_v3',all); resumes=all; }
-    catch{ const slim={...rec,dataUrl:null}; const all={...resumes,[me.id]:slim}; try{store.set('resumes_v3',all);}catch{} resumes=all; }
-    vProfile();
-  };
-  const rd=new FileReader();
-  rd.onload=()=>done(rd.result);
-  rd.onerror=()=>toast('Could not read file','err');
-  rd.readAsDataURL(f);
-}
-function applyParsed(skills,exp,quals){
-  const me=myCandidate(); if(!me) return;
-  const ov={...(profileOverrides[me.id]||{})};
-  if(skills.length) ov.skills=skills.join(', ');
-  if(exp) ov.exp=exp;
-  if(quals) ov.qual=quals;
-  profileOverrides[me.id]=ov; store.set('profile_overrides',profileOverrides);
-  toast('Profile updated from resume','ok'); vProfile();
-}
-function resumeTextOf(r){
-  if(!r) return null;
-  if(r.text) return r.text;
-  if(r.dataUrl && /\.txt$/i.test(r.name||'')){
-    try{
-      const bin=atob(r.dataUrl.split(',')[1]||'');
-      try{ return decodeURIComponent(escape(bin)); }catch{ return bin; }
-    }catch{ return null; }
-  }
-  return null;
+  toast('Uploading resume…');
+  uploadResumeFile(f).then(out=>{
+    const skills=out.extracted_skills||[];
+    $('#parseOut').innerHTML=`<div style="font-weight:700;font-size:13px;margin-bottom:8px">AI extracted</div>
+      <div class="skillchips">${skills.map(s=>`<span class="hit">${esc(s)}</span>`).join('')||'<span class="neutral">no known skills found</span>'}</div>
+      <div class="kv mt"><span>Experience</span><b>${out.extracted_experience_years||0} yrs</b></div>
+      <div class="kv"><span>Qualification</span><b>${esc(out.extracted_qualification||'—')}</b></div>
+      <p style="font-size:12.5px;color:var(--gray)">Your profile was updated automatically — match scores use the new data.</p>`;
+    toast('Resume parsed and profile updated','ok');
+  }).catch(err=>toast(err.message,'err'));
 }
 function resumePreviewHtmlText(text){
   const lines=text.split('\n');
@@ -1368,27 +1044,15 @@ function resumePreviewHtmlText(text){
   }
   return html+'</div>';
 }
-function downloadResume(r){
-  const a=document.createElement('a');
-  a.href=r.dataUrl; a.download=r.name||'resume'; a.rel='noopener';
-  document.body.appendChild(a); a.click(); a.remove();
-  toast('Resume downloaded','ok');
-}
 function viewResume(){
-  const me=myCandidate(); const r=me&&resumes[me.id];
-  if(!r){ toast('No resume uploaded','err'); return; }
-  const t=resumeTextOf(r);
-  if(t){ openModal('Resume — '+me.name, resumePreviewHtmlText(t), true); return; }
-  if(r.dataUrl){ downloadResume(r); return; }
-  toast('No preview available for this resume','err');
+  const me=myCandidate();
+  if(!me||!me.resumeText){ toast('No resume uploaded','err'); return; }
+  openModal('Resume — '+me.name, resumePreviewHtmlText(me.resumeText), true);
 }
 function viewCandidateResume(cid){
-  const r=resumes[cid]; const c=candById(cid);
-  if(!r){ toast('No resume uploaded','err'); return; }
-  const t=resumeTextOf(r);
-  if(t){ openModal('Resume — '+(c?c.name:''), resumePreviewHtmlText(t), true); return; }
-  if(r.dataUrl){ downloadResume(r); return; }
-  toast('No preview available for this resume','err');
+  const c=candById(cid);
+  if(!c||!c.resumeText){ toast('No resume on file for this candidate','err'); return; }
+  openModal('Resume — '+c.name, resumePreviewHtmlText(c.resumeText), true);
 }
 function openSearch(){
   const isApplicant=session.role==='applicant';
@@ -1406,7 +1070,7 @@ function openSearch(){
         <div><b>${esc(j.title)}</b><div style="font-size:12px;color:var(--gray)">${esc(j.company)} · ${esc(j.location)}</div></div>
         <span class="t">${esc(j.salary)}</span></div>`).join('');
     if(!isApplicant){
-      const chits=allCandidates().filter(c=>[c.name,c.headline,c.skills,c.location].join(' ').toLowerCase().includes(q)).slice(0,6);
+      const chits=CANDIDATES.filter(c=>[c.name,c.headline,c.skills,c.location].join(' ').toLowerCase().includes(q)).slice(0,6);
       if(chits.length) html+=`<div style="font-size:12px;font-weight:700;color:var(--faint);margin:8px 0 4px">CANDIDATES</div>`+
         chits.map(c=>`<div class="feed-item" style="cursor:pointer" onclick="closeModal();openCandidate('${c.id}')">
           ${avatar(c.name,32)}<div><b>${esc(c.name)}</b><div style="font-size:12px;color:var(--gray)">${esc(c.headline)} · ${esc(c.location)}</div></div></div>`).join('');
@@ -1431,10 +1095,10 @@ function openLegal(which){
     ${isT?`<h4>1. The demo</h4><p>SmartRecruit is demonstrated with synthetic candidate data. No real personal data is collected, stored, or processed by this demo site.</p>
     <h4>2. Accounts</h4><p>Demo accounts are shared and carry no security guarantees. Do not use real credentials.</p>
     <h4>3. AI screening</h4><p>Rankings come from a published deterministic formula. They are illustrative and not hiring advice.</p>`
-    :`<h4>1. Data in this demo</h4><p>All candidate profiles are fictional and stored only in your browser (localStorage). Nothing leaves your device.</p>
+    :`<h4>1. Data in this demo</h4><p>Candidate profiles are fictional demo data stored in the SmartRecruit PostgreSQL database. Your login session token is kept in your browser's local storage.</p>
     <h4>2. No tracking</h4><p>This demo sets no analytics cookies and makes no third-party requests.</p>
     <h4>3. Production note</h4><p>A production deployment would need a published retention policy, consent flows, and data-processing terms before handling real candidate data.</p>`}
     <p style="color:var(--faint);font-size:12.5px">Final legal text must be reviewed by counsel before any production use.</p></div>`);
 }
 
-route();
+boot();

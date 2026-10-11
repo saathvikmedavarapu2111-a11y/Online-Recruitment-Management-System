@@ -10,7 +10,8 @@ GET /api/screening/job/{job_id}
 from fastapi import APIRouter, Depends, HTTPException
 
 from .. import db
-from ..ai.matcher import score_candidate
+from ..ai.matcher import score_candidate, skill_evidence
+from ..ai.skills import split_skills
 from ..security import require_recruiter
 
 router = APIRouter(prefix="/api/screening", tags=["screening"])
@@ -27,10 +28,11 @@ def _owned_job(job_id: int, recruiter_id: int) -> dict:
 
 
 def _ranked(job_id: int) -> list[dict]:
-    return db.fetch_all(
+    rows = db.fetch_all(
         """SELECT a.application_id, u.name AS candidate_name, u.email,
-                  c.skills AS candidate_skills,
+                  c.skills AS candidate_skills, c.resume_text,
                   c.experience_years AS candidate_experience,
+                  c.qualification AS candidate_qualification,
                   ms.score, ms.matched_skills, ms.missing_skills, ms.ranked_on,
                   a.status
            FROM applications a
@@ -41,13 +43,25 @@ def _ranked(job_id: int) -> list[dict]:
            ORDER BY ms.score DESC NULLS LAST, a.applied_at ASC""",
         (job_id,),
     )
+    job = db.fetch_one(
+        "SELECT required_skills FROM jobs WHERE job_id = %s", (job_id,)
+    )
+    req = split_skills((job or {}).get("required_skills"))
+    for r in rows:
+        # Evidence is recomputed live — deterministic, no extra column needed.
+        r["skill_evidence"] = skill_evidence(
+            {"skills": r.pop("candidate_skills"), "resume_text": r.pop("resume_text")},
+            req,
+        )
+    return rows
 
 
 @router.post("/job/{job_id}/run")
 def run_screening(job_id: int, user: dict = Depends(require_recruiter)):
     job = _owned_job(job_id, user["user_id"])
     applications = db.fetch_all(
-        """SELECT a.application_id, c.skills, c.experience_years, c.qualification
+        """SELECT a.application_id, c.skills, c.resume_text,
+                  c.experience_years, c.qualification
            FROM applications a
            JOIN candidates c ON c.candidate_id = a.candidate_id
            WHERE a.job_id = %s""",
@@ -57,6 +71,7 @@ def run_screening(job_id: int, user: dict = Depends(require_recruiter)):
         result = score_candidate(
             {
                 "skills": app["skills"],
+                "resume_text": app["resume_text"],
                 "experience_years": app["experience_years"],
                 "qualification": app["qualification"],
             },

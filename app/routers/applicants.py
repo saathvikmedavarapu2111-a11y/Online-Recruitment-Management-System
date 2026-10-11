@@ -22,7 +22,7 @@ from ..security import get_current_user, require_applicant, require_recruiter
 router = APIRouter(prefix="/api/applicants", tags=["applicants"])
 
 _PROFILE_COLS = """c.candidate_id, c.user_id, c.phone, c.location, c.skills,
-                   c.experience_years, c.qualification, c.resume_filename,
+                   c.experience_years, c.qualification, c.resume_text, c.resume_filename,
                    c.updated_at"""
 
 

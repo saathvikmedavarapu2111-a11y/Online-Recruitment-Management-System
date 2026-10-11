@@ -73,28 +73,49 @@ JOIN (VALUES
 ON CONFLICT (user_id) DO NOTHING;
 
 -- ---------------------------------------------------------------------
--- Jobs (posted by Meera Nair)
+-- Jobs (posted by Meera Nair) — mirrors the product's eight enriched roles
 -- ---------------------------------------------------------------------
-INSERT INTO jobs (recruiter_id, title, description, required_skills,
-                  qualification, min_experience_years, location, employment_type)
-SELECT u.user_id, v.title, v.description, v.required_skills, v.qualification,
-       v.min_experience_years, v.location, v.employment_type
+INSERT INTO jobs (recruiter_id, title, company, description, required_skills,
+                  qualification, min_experience_years, location, employment_type,
+                  salary_range, openings)
+SELECT u.user_id, v.title, v.company, v.description, v.required_skills, v.qualification,
+       v.min_experience_years, v.location, v.employment_type, v.salary_range, v.openings
 FROM users u
 CROSS JOIN (VALUES
-  ('Backend Developer',
-   'Build and maintain REST APIs for our fintech platform.',
+  ('Backend Developer', 'FinEdge Technologies',
+   'Build and maintain REST APIs for our fintech platform. FinEdge is a growing fintech startup processing over 2M transactions a day. You will join a 12-person engineering team owning services end to end.',
    'python, django, postgresql, rest',
-   'B.Tech Computer Science', 2.0, 'Bengaluru', 'Full-time'),
-  ('Frontend Developer',
-   'Build responsive customer-facing interfaces.',
+   'B.Tech Computer Science', 2.0, 'Bengaluru', 'Full-time', '₹12–18 LPA', 3),
+  ('Frontend Developer', 'BrightKart Retail',
+   'Build responsive customer-facing interfaces. BrightKart serves 5M shoppers a month. Our storefront team cares deeply about performance and polish.',
    'javascript, react, css',
-   'B.Sc Computer Science', 1.0, 'Chennai', 'Full-time'),
-  ('Data Analyst',
-   'SQL analytics and reporting for product teams.',
+   'B.Sc Computer Science', 1.0, 'Chennai', 'Full-time', '₹8–12 LPA', 2),
+  ('Data Analyst', 'HealthLoop Analytics',
+   'SQL analytics and reporting for product teams. HealthLoop turns hospital operations data into decisions. Small data team, large ownership.',
    'python, sql, pandas',
-   'M.Sc Data Science', 2.0, 'Pune', 'Full-time')
-) AS v(title, description, required_skills, qualification,
-       min_experience_years, location, employment_type)
+   'M.Sc Data Science', 2.0, 'Pune', 'Full-time', '₹10–14 LPA', 2),
+  ('DevOps Engineer', 'FinEdge Technologies',
+   'Own CI/CD pipelines and cloud infrastructure on AWS. FinEdge runs entirely on AWS. You will keep 40+ services deploying safely, several times a day.',
+   'docker, kubernetes, aws',
+   'B.Tech Computer Science', 3.0, 'Bengaluru', 'Full-time', '₹14–20 LPA', 1),
+  ('ML Engineer', 'VisionCraft AI',
+   'Build and ship machine-learning models to production. VisionCraft builds vision models for retail. Research-friendly team with a strong MLOps culture.',
+   'python, machine learning, tensorflow',
+   'M.Tech Artificial Intelligence', 2.0, 'Bengaluru', 'Full-time', '₹16–24 LPA', 2),
+  ('UI/UX Designer', 'BrightKart Retail',
+   'Design intuitive product experiences from research to prototype. BrightKart''s design team of six owns the end-to-end shopper journey across web and mobile.',
+   'figma, prototyping, user research',
+   'B.Des', 2.0, 'Remote', 'Full-time', '₹9–13 LPA', 1),
+  ('QA Engineer', 'FinEdge Technologies',
+   'Automate testing and guard release quality. Quality is a first-class function at FinEdge — QA engineers pair directly with developers.',
+   'selenium, python, testing',
+   'B.Sc Computer Science', 1.5, 'Hyderabad', 'Full-time', '₹7–10 LPA', 2),
+  ('Product Manager', 'VisionCraft AI',
+   'Own the roadmap for our hiring platform. VisionCraft is launching an AI hiring product. You will own discovery, roadmap and launch.',
+   'roadmap, agile, analytics',
+   'MBA', 3.0, 'Bengaluru', 'Full-time', '₹18–26 LPA', 1)
+) AS v(title, company, description, required_skills, qualification,
+       min_experience_years, location, employment_type, salary_range, openings)
 WHERE u.email = 'meera.nair@smartrecruit.app'
 ON CONFLICT DO NOTHING;
 
